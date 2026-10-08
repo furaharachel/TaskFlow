@@ -1,0 +1,225 @@
+/* =========================================================
+   TASKFLOW — STYLE GLOBAL
+   ========================================================= */
+
+$couleur-principale: #5b4bdb;
+$couleur-principale-sombre: #4638b8;
+$couleur-fond: #f6f7fb;
+$couleur-blanc: #ffffff;
+$couleur-texte: #202124;
+$couleur-secondaire: #6b7280;
+$couleur-bordure: #e5e7eb;
+$couleur-succes: #16a34a;
+$couleur-warning: #f59e0b;
+$couleur-danger: #dc2626;
+
+$rayon: 14px;
+$ombre: 0 8px 25px rgba(0, 0, 0, 0.06);
+
+
+/* =========================================================
+   RESET
+   ========================================================= */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: $couleur-fond;
+    color: $couleur-texte;
+    line-height: 1.6;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+
+/* =========================================================
+   CONTENEUR
+   ========================================================= */
+
+.conteneur {
+    width: 92%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+
+/* =========================================================
+   BOUTONS — COMPOSANT RÉUTILISABLE
+   ========================================================= */
+
+.bouton {
+    display: inline-block;
+    border: none;
+    border-radius: 10px;
+    padding: 11px 18px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.bouton-principal {
+    background: $couleur-principale;
+    color: $couleur-blanc;
+
+    &:hover {
+        background: $couleur-principale-sombre;
+    }
+}
+
+.bouton-secondaire {
+    background: $couleur-blanc;
+    color: $couleur-texte;
+    border: 1px solid $couleur-bordure;
+
+    &:hover {
+        background: #f3f4f6;
+    }
+}
+
+
+/* =========================================================
+   EN-TÊTE
+   ========================================================= */
+
+.entete {
+    background: $couleur-blanc;
+    border-bottom: 1px solid $couleur-bordure;
+    padding: 18px 0;
+}
+
+.entete-interieur {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo {
+    font-size: 22px;
+    font-weight: bold;
+    color: $couleur-principale;
+}
+
+.navigation {
+    display: flex;
+    gap: 25px;
+}
+
+.navigation a {
+    color: $couleur-secondaire;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.navigation a:hover,
+.navigation a.actif {
+    color: $couleur-principale;
+}
+
+
+/* =========================================================
+   PAGE
+   ========================================================= */
+
+.page {
+    padding: 40px 0;
+}
+
+.titre-page {
+    margin-bottom: 8px;
+    font-size: 30px;
+}
+
+.sous-titre {
+    color: $couleur-secondaire;
+    margin-bottom: 30px;
+}
+
+
+/* =========================================================
+   CARTES
+   ========================================================= */
+
+.grille-cartes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.carte {
+    background: $couleur-blanc;
+    border: 1px solid $couleur-bordure;
+    border-radius: $rayon;
+    padding: 22px;
+    box-shadow: $ombre;
+}
+
+.carte-label {
+    color: $couleur-secondaire;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.carte-valeur {
+    font-size: 28px;
+    font-weight: bold;
+}
+
+
+/* =========================================================
+   MESSAGE
+   ========================================================= */
+
+.message {
+    background: $couleur-blanc;
+    border-left: 4px solid $couleur-succes;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 25px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 800px) {
+
+    .grille-cartes {
+        grid-template-columns: 1fr;
+    }
+
+    .navigation {
+        gap: 12px;
+    }
+
+    .entete-interieur {
+        flex-direction: column;
+        gap: 15px;
+    }
+}
+
+@media (max-width: 500px) {
+
+    .navigation {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .titre-page {
+        font-size: 24px;
+    }
+}
