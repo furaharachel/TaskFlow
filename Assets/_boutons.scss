@@ -1,0 +1,59 @@
+.bouton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 9px 16px;
+    border: 1px solid transparent;
+    border-radius: $rayon-petit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color $transition,
+                border-color $transition,
+                color $transition,
+                transform $transition;
+}
+
+.bouton:hover {
+    transform: translateY(-1px);
+}
+
+.bouton-principal {
+    background: $couleur-principale;
+    color: $couleur-blanc;
+}
+
+.bouton-principal:hover {
+    background: $couleur-principale-foncee;
+}
+
+.bouton-secondaire {
+    background: $couleur-blanc;
+    color: $couleur-texte;
+    border-color: $couleur-bordure;
+}
+
+.bouton-secondaire:hover {
+    background: $couleur-secondaire;
+}
+
+.bouton-danger {
+    background: $couleur-danger;
+    color: $couleur-blanc;
+}
+
+.bouton-danger:hover {
+    background: #b83d39;
+}
+
+.bouton-succes {
+    background: $couleur-succes;
+    color: $couleur-blanc;
+}
+
+.bouton-petit {
+    min-height: 34px;
+    padding: 7px 12px;
+    font-size: 13px;
+}

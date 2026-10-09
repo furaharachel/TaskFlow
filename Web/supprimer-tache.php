@@ -2,7 +2,11 @@
 
 require_once __DIR__ . '/../App/Session.php';
 require_once __DIR__ . '/../Config/Database.php';
+require_once __DIR__ . '/../App/Tache.php';
+require_once __DIR__ . '/../Config/Database.php';
 require_once __DIR__ . '/../App/Repository/TacheRepository.php';
+require_once __DIR__ . '/../App/Repository/HistoriqueRepository.php';
+require_once __DIR__ . '/../App/HistoriqueService.php';
 
 Session::demarrer();
 
@@ -25,6 +29,8 @@ if ($id <= 0) {
 $database = new Database();
 
 $tacheRepository = new TacheRepository($database);
+$historiqueRepository = new HistoriqueRepository($database);
+$historiqueService = new HistoriqueService($historiqueRepository);
 
 $tache = $tacheRepository->trouverParId($id);
 
@@ -37,6 +43,15 @@ if ((int) $tache->getUtilisateurId() !== $utilisateurId) {
     header('Location: /TaskFlow/Web/taches.php');
     exit;
 }
+
+$titreTache = $tache->getTitre();
+
+$historiqueService->enregistrer(
+    $utilisateurId,
+    $id,
+    'suppression',
+    'La tâche "' . $titreTache . '" a été supprimée.'
+);
 
 $tacheRepository->supprimer($id);
 

@@ -10,33 +10,40 @@ class TacheValidator
     {
         $this->erreurs = array();
 
-        if (trim($tache->getTitre()) === '') {
-            $this->erreurs['titre'] = 'Le titre de la tâche est obligatoire.';
-        } elseif (strlen($tache->getTitre()) > 150) {
-            $this->erreurs['titre'] = 'Le titre ne peut pas dépasser 150 caractères.';
+        /*
+         * Validation du titre
+         */
+        $titre = trim($tache->getTitre());
+
+        if ($titre === '') {
+
+            $this->erreurs['titre'] =
+                'Le titre de la tâche est obligatoire.';
+
+        } elseif (strlen(utf8_decode($titre)) > 150) {
+
+            $this->erreurs['titre'] =
+                'Le titre ne peut pas dépasser 150 caractères.';
         }
 
-        if ($tache->getStatut() === '') {
-            $this->erreurs['statut'] = 'Le statut est obligatoire.';
-        }
-
+        /*
+         * Validation du statut
+         */
         $statutsAutorises = array(
             'a_faire',
             'en_cours',
             'terminee'
         );
 
-        if (
-            $tache->getStatut() !== '' &&
-            !in_array($tache->getStatut(), $statutsAutorises)
-        ) {
-            $this->erreurs['statut'] = 'Le statut sélectionné est invalide.';
+        if (!in_array($tache->getStatut(), $statutsAutorises, true)) {
+
+            $this->erreurs['statut'] =
+                'Le statut sélectionné est invalide.';
         }
 
-        if ($tache->getPriorite() === '') {
-            $this->erreurs['priorite'] = 'La priorité est obligatoire.';
-        }
-
+        /*
+         * Validation de la priorité
+         */
         $prioritesAutorisees = array(
             'basse',
             'normale',
@@ -44,20 +51,27 @@ class TacheValidator
             'urgente'
         );
 
-        if (
-            $tache->getPriorite() !== '' &&
-            !in_array($tache->getPriorite(), $prioritesAutorisees)
-        ) {
-            $this->erreurs['priorite'] = 'La priorité sélectionnée est invalide.';
+        if (!in_array($tache->getPriorite(), $prioritesAutorisees, true)) {
+
+            $this->erreurs['priorite'] =
+                'La priorité sélectionnée est invalide.';
         }
 
-        if ($tache->getDureeEstimee() !== null && $tache->getDureeEstimee() !== '') {
+        /*
+         * Validation de la durée estimée
+         */
+        $duree = $tache->getDureeEstimee();
+
+        if ($duree !== null && $duree !== '') {
+
             if (
-                !is_numeric($tache->getDureeEstimee()) ||
-                $tache->getDureeEstimee() < 1
+                !is_numeric($duree) ||
+                (int) $duree < 1 ||
+                (string) (int) $duree !== (string) $duree
             ) {
+
                 $this->erreurs['duree_estimee'] =
-                    'La durée estimée doit être un nombre supérieur à 0.';
+                    'La durée doit être un nombre entier supérieur à 0.';
             }
         }
 
