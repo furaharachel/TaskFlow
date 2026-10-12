@@ -1,67 +1,10 @@
 <?php
-header('Content-Type: text/html; charset=UTF-8');
+$titrePage = 'Rappels';
+require_once __DIR__ . '/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="fr">
 
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Rappels - TaskFlow</title>
-
-    <link
-        rel="stylesheet"
-        href="/TaskFlow/Assets/css/style.css"
-    >
-
-</head>
-
-<body>
-
-<header class="en-tete">
-
-    <div class="conteneur navigation">
-
-        <div class="logo">
-
-            <a href="/TaskFlow/Web/index.php">
-                TaskFlow
-            </a>
-
-        </div>
-
-        <nav>
-
-            <a href="/TaskFlow/Web/index.php">
-                Tableau de bord
-            </a>
-
-            <a href="/TaskFlow/Web/taches.php">
-                Mes tâches
-            </a>
-
-            <a href="/TaskFlow/Web/categories.php">
-                Catégories
-            </a>
-
-            <a href="/TaskFlow/Web/deconnexion.php">
-                Déconnexion
-            </a>
-
-        </nav>
-
-    </div>
-
-</header>
-
-
-<main class="conteneur">
+<section class="page">
+<div class="conteneur">
 
     <div class="page-entete">
 
@@ -287,8 +230,7 @@ header('Content-Type: text/html; charset=UTF-8');
 
     </section>
 
-</main>
+</div>
+</section>
 
-</body>
-
-</html>
+<?php require_once __DIR__ . '/footer.php'; ?>

@@ -53,60 +53,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 ?>
+<?php
+$titrePage = 'Créer une catégorie';
+require_once __DIR__ . '/../Templates/header.php';
+?>
 
-<!DOCTYPE html>
-<html lang="fr">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Créer une catégorie — TaskFlow</title>
-
-    <link
-        rel="stylesheet"
-        href="../Assets/css/style.css"
-    >
-
-</head>
-
-<body>
-
-<header class="entete">
-
-    <div class="conteneur entete-interieur">
-
-        <a href="index.php" class="logo">
-            TaskFlow
-        </a>
-
-        <nav class="navigation">
-
-            <a href="index.php">
-                Tableau de bord
-            </a>
-
-            <a href="taches.php">
-                Mes tâches
-            </a>
-
-            <a href="categories.php" class="actif">
-                Catégories
-            </a>
-
-        </nav>
-
-    </div>
-
-</header>
-
-
-<main class="page">
+<section class="page">
 
     <div class="conteneur">
 
@@ -228,8 +180,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     </div>
 
-</main>
+</section>
 
-</body>
-
-</html>
+<?php require_once __DIR__ . '/../Templates/footer.php'; ?>

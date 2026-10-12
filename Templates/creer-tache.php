@@ -1,65 +1,9 @@
-<!DOCTYPE html>
-<html lang="fr">
+<?php
+$titrePage = 'Nouvelle tâche';
+require_once __DIR__ . '/header.php';
+?>
 
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Nouvelle tâche — TaskFlow</title>
-
-    <link
-        rel="stylesheet"
-        href="/TaskFlow/Assets/css/style.css"
-    >
-
-</head>
-
-<body>
-
-<header class="entete">
-
-    <div class="conteneur entete-interieur">
-
-        <a
-            href="/TaskFlow/Web/index.php"
-            class="logo"
-        >
-            TaskFlow
-        </a>
-
-        <nav class="navigation">
-
-            <a href="/TaskFlow/Web/index.php">
-                Tableau de bord
-            </a>
-
-            <a
-                href="/TaskFlow/Web/taches.php"
-                class="actif"
-            >
-                Mes tâches
-            </a>
-
-            <a href="/TaskFlow/Web/categories.php">
-                Catégories
-            </a>
-
-            <a href="/TaskFlow/Web/deconnexion.php">
-                Déconnexion
-            </a>
-
-        </nav>
-
-    </div>
-
-</header>
-
-<main class="page">
+<section class="page">
 
     <div class="conteneur">
 
@@ -371,8 +315,6 @@
 
     </div>
 
-</main>
+</section>
 
-</body>
-
-</html>
+<?php require_once __DIR__ . '/footer.php'; ?>

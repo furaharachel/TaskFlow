@@ -192,6 +192,8 @@ if ($initiales === '') {
 
                 <a
                     href="/TaskFlow/Web/index.php"
+                    aria-label="Tableau de bord"
+                    title="Tableau de bord"
                     class="<?php
                     echo taskflowMenuClasse(
                         array('index.php'),
@@ -224,6 +226,8 @@ if ($initiales === '') {
 
                 <a
                     href="/TaskFlow/Web/taches.php"
+                    aria-label="Mes tâches"
+                    title="Mes tâches"
                     class="<?php
                     echo taskflowMenuClasse(
                         array(
@@ -272,6 +276,8 @@ if ($initiales === '') {
 
                 <a
                     href="/TaskFlow/Web/categories.php"
+                    aria-label="Catégories"
+                    title="Catégories"
                     class="<?php
                     echo taskflowMenuClasse(
                         array(
@@ -314,6 +320,8 @@ if ($initiales === '') {
 
                 <a
                     href="/TaskFlow/Web/rappels.php"
+                    aria-label="Rappels"
+                    title="Rappels"
                     class="<?php
                     echo taskflowMenuClasse(
                         array('rappels.php'),
@@ -346,6 +354,8 @@ if ($initiales === '') {
 
                 <a
                     href="/TaskFlow/Web/historique.php"
+                    aria-label="Historique"
+                    title="Historique"
                     class="<?php
                     echo taskflowMenuClasse(
                         array('historique.php'),
