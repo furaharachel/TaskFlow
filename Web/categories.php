@@ -22,66 +22,12 @@ try {
 }
 
 ?>
+<?php
+$titrePage = 'Catégories';
+require_once __DIR__ . '/../Templates/header.php';
+?>
 
-<!DOCTYPE html>
-<html lang="fr">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Catégories — TaskFlow</title>
-
-    <link
-        rel="stylesheet"
-        href="../Assets/css/style.css"
-    >
-
-</head>
-
-<body>
-
-<header class="entete">
-
-    <div class="conteneur entete-interieur">
-
-        <a href="index.php" class="logo">
-            TaskFlow
-        </a>
-
-        <nav class="navigation">
-
-            <a href="index.php">
-                Tableau de bord
-            </a>
-
-            <a href="taches.php">
-                Mes tâches
-            </a>
-
-            <a href="categories.php" class="actif">
-                Catégories
-            </a>
-
-        </nav>
-
-        <a
-            href="creer-categorie.php"
-            class="bouton bouton-principal"
-        >
-            + Nouvelle catégorie
-        </a>
-
-    </div>
-
-</header>
-
-<main class="page">
+<section class="page">
 
     <div class="conteneur">
 
@@ -195,8 +141,8 @@ try {
 
     </div>
 
-</main>
+</section>
 
-</body>
+<?php require_once __DIR__ . '/../Templates/footer.php'; ?>
 
 </html>
