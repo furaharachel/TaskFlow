@@ -1,4 +1,5 @@
 <?php
+
 $titrePage = 'Mes tâches';
 require_once __DIR__ . '/header.php';
 
@@ -64,7 +65,11 @@ function taskflowPriorite($priorite)
 
 function taskflowClassePriorite($priorite)
 {
-    if ($priorite === 'urgente' || $priorite === 'haute') {
+    if ($priorite === 'urgente') {
+        return 'priorite priorite-urgente';
+    }
+
+    if ($priorite === 'haute') {
         return 'priorite priorite-haute';
     }
 
@@ -74,20 +79,40 @@ function taskflowClassePriorite($priorite)
 
     return 'priorite priorite-normale';
 }
+
+/*
+ * Calcul des statistiques à partir des tâches déjà chargées.
+ */
+
+$totalTaches = count($taches);
+$nombreAFaire = 0;
+$nombreEnCours = 0;
+$nombreTerminees = 0;
+
+foreach ($taches as $tache) {
+    if ($tache->getStatut() === 'a_faire') {
+        $nombreAFaire++;
+    } elseif ($tache->getStatut() === 'en_cours') {
+        $nombreEnCours++;
+    } elseif ($tache->getStatut() === 'terminee') {
+        $nombreTerminees++;
+    }
+}
+
 ?>
 
 <main class="page">
     <div class="conteneur">
 
-        <section class="introduction">
+        <section class="introduction introduction-taches">
             <div>
-                <p class="sur-titre">ORGANISATION</p>
+                <p class="sur-titre">ESPACE DE TRAVAIL</p>
 
                 <h1 class="titre-page">Mes tâches</h1>
 
                 <p class="sous-titre">
-                    Organisez vos activités, suivez votre progression
-                    et gardez le contrôle de vos priorités.
+                    Organisez vos activités, définissez vos priorités
+                    et suivez votre progression au quotidien.
                 </p>
             </div>
 
@@ -96,34 +121,107 @@ function taskflowClassePriorite($priorite)
                     href="/TaskFlow/Web/creer-tache.php"
                     class="bouton bouton-principal"
                 >
-                    + Nouvelle tâche
+                    <span class="bouton-symbole">+</span>
+                    Nouvelle tâche
                 </a>
             </div>
         </section>
 
-        <section class="section">
+        <section
+            class="resume-taches"
+            aria-label="Résumé de mes tâches"
+        >
 
-            <div class="section-entete">
+            <article class="resume-tache resume-tache-total">
+                <div class="resume-tache-entete">
+                    <span class="resume-tache-icone">T</span>
+                    <span class="resume-tache-label">Total</span>
+                </div>
+
+                <p class="resume-tache-valeur">
+                    <?php echo $totalTaches; ?>
+                </p>
+
+                <p class="resume-tache-description">
+                    Tâche(s) enregistrée(s)
+                </p>
+            </article>
+
+            <article class="resume-tache resume-tache-attente">
+                <div class="resume-tache-entete">
+                    <span class="resume-tache-icone">○</span>
+                    <span class="resume-tache-label">À faire</span>
+                </div>
+
+                <p class="resume-tache-valeur">
+                    <?php echo $nombreAFaire; ?>
+                </p>
+
+                <p class="resume-tache-description">
+                    À commencer
+                </p>
+            </article>
+
+            <article class="resume-tache resume-tache-cours">
+                <div class="resume-tache-entete">
+                    <span class="resume-tache-icone">↗</span>
+                    <span class="resume-tache-label">En cours</span>
+                </div>
+
+                <p class="resume-tache-valeur">
+                    <?php echo $nombreEnCours; ?>
+                </p>
+
+                <p class="resume-tache-description">
+                    En cours de réalisation
+                </p>
+            </article>
+
+            <article class="resume-tache resume-tache-termine">
+                <div class="resume-tache-entete">
+                    <span class="resume-tache-icone">✓</span>
+                    <span class="resume-tache-label">Terminées</span>
+                </div>
+
+                <p class="resume-tache-valeur">
+                    <?php echo $nombreTerminees; ?>
+                </p>
+
+                <p class="resume-tache-description">
+                    Tâches accomplies
+                </p>
+            </article>
+
+        </section>
+
+        <section class="section section-liste-taches">
+
+            <div class="section-entete section-entete-taches">
                 <div>
-                    <h2>Toutes mes tâches</h2>
+                    <h2>Liste de mes tâches</h2>
 
                     <p>
-                        <?php echo count($taches); ?>
-                        tâche(s) enregistrée(s)
+                        Consultez les détails et gérez vos activités.
                     </p>
                 </div>
+
+                <span class="compteur-taches">
+                    <?php echo $totalTaches; ?>
+                    <?php echo $totalTaches > 1 ? 'tâches' : 'tâche'; ?>
+                </span>
             </div>
 
             <?php if (empty($taches)): ?>
 
-                <div class="carte vide">
+                <div class="carte vide vide-taches">
                     <div class="vide-icone">+</div>
 
-                    <h3>Aucune tâche pour le moment</h3>
+                    <h3>Votre espace est prêt</h3>
 
                     <p>
-                        Créez votre première tâche pour commencer
-                        à organiser votre travail.
+                        Vous n'avez pas encore créé de tâche.
+                        Ajoutez-en une pour commencer à organiser
+                        vos journées.
                     </p>
 
                     <a
@@ -136,11 +234,11 @@ function taskflowClassePriorite($priorite)
 
             <?php else: ?>
 
-                <div class="grille-taches">
+                <div class="grille-taches grille-taches-moderne">
 
                     <?php foreach ($taches as $tache): ?>
 
-                        <article class="carte carte-tache">
+                        <article class="carte carte-tache carte-tache-moderne">
 
                             <div class="carte-tache-entete">
                                 <span class="<?php
@@ -162,13 +260,13 @@ function taskflowClassePriorite($priorite)
                                         $tache->getPriorite()
                                     );
                                 ?>">
+                                    Priorité :
                                     <?php
-                                    echo 'Priorité : '
-                                        . taskflowE(
-                                            taskflowPriorite(
-                                                $tache->getPriorite()
-                                            )
-                                        );
+                                    echo taskflowE(
+                                        taskflowPriorite(
+                                            $tache->getPriorite()
+                                        )
+                                    );
                                     ?>
                                 </span>
                             </div>
@@ -180,6 +278,7 @@ function taskflowClassePriorite($priorite)
                             </h2>
 
                             <?php if ($tache->getDescription() !== ''): ?>
+
                                 <p class="tache-description">
                                     <?php
                                     echo nl2br(
@@ -189,10 +288,13 @@ function taskflowClassePriorite($priorite)
                                     );
                                     ?>
                                 </p>
+
                             <?php else: ?>
+
                                 <p class="tache-description tache-sans-description">
-                                    Aucune description.
+                                    Aucune description renseignée.
                                 </p>
+
                             <?php endif; ?>
 
                             <div class="tache-details">
@@ -205,6 +307,7 @@ function taskflowClassePriorite($priorite)
                                     <strong>
                                         <?php
                                         echo $tache->getCategorieNom() !== null
+                                            && $tache->getCategorieNom() !== ''
                                             ? taskflowE(
                                                 $tache->getCategorieNom()
                                             )
@@ -214,6 +317,7 @@ function taskflowClassePriorite($priorite)
                                 </div>
 
                                 <?php if ($tache->getDateEcheance() !== null): ?>
+
                                     <div class="tache-detail">
                                         <span class="tache-detail-label">
                                             Échéance
@@ -227,9 +331,11 @@ function taskflowClassePriorite($priorite)
                                             ?>
                                         </strong>
                                     </div>
+
                                 <?php endif; ?>
 
                                 <?php if ($tache->getDureeEstimee() !== null): ?>
+
                                     <div class="tache-detail">
                                         <span class="tache-detail-label">
                                             Durée estimée
@@ -239,26 +345,48 @@ function taskflowClassePriorite($priorite)
                                             <?php
                                             echo (int) $tache->getDureeEstimee();
                                             ?>
-                                            minutes
+                                            min
                                         </strong>
                                     </div>
+
                                 <?php endif; ?>
 
                             </div>
 
                             <?php if ($tache->getNombreSousTaches() > 0): ?>
+
                                 <div class="progression-tache">
                                     <div class="progression-entete">
-                                        <span>Progression</span>
+                                        <span>Progression des sous-tâches</span>
 
                                         <strong>
                                             <?php
-                                            echo (int) $tache->getProgression();
+                                            echo max(
+                                                0,
+                                                min(
+                                                    100,
+                                                    (int) $tache->getProgression()
+                                                )
+                                            );
                                             ?> %
                                         </strong>
                                     </div>
 
-                                    <div class="progression-barre">
+                                    <div
+                                        class="progression-barre"
+                                        role="progressbar"
+                                        aria-valuemin="0"
+                                        aria-valuemax="100"
+                                        aria-valuenow="<?php
+                                            echo max(
+                                                0,
+                                                min(
+                                                    100,
+                                                    (int) $tache->getProgression()
+                                                )
+                                            );
+                                        ?>"
+                                    >
                                         <div
                                             class="progression-valeur"
                                             style="width: <?php
@@ -273,33 +401,42 @@ function taskflowClassePriorite($priorite)
                                         ></div>
                                     </div>
                                 </div>
+
                             <?php endif; ?>
 
-                            <div class="actions actions-tache">
+                            <div class="actions actions-tache actions-tache-modernes">
 
                                 <a
-                                    href="/TaskFlow/Web/modifier-tache.php?id=<?php echo (int) $tache->getId(); ?>"
+                                    href="/TaskFlow/Web/modifier-tache.php?id=<?php
+                                        echo (int) $tache->getId();
+                                    ?>"
                                     class="bouton bouton-secondaire bouton-petit"
                                 >
                                     Modifier
                                 </a>
 
                                 <a
-                                    href="/TaskFlow/Web/sous-taches.php?id=<?php echo (int) $tache->getId(); ?>"
+                                    href="/TaskFlow/Web/sous-taches.php?id=<?php
+                                        echo (int) $tache->getId();
+                                    ?>"
                                     class="bouton bouton-secondaire bouton-petit"
                                 >
                                     Sous-tâches
                                 </a>
 
                                 <a
-                                    href="/TaskFlow/Web/rappels.php?id=<?php echo (int) $tache->getId(); ?>"
+                                    href="/TaskFlow/Web/rappels.php?id=<?php
+                                        echo (int) $tache->getId();
+                                    ?>"
                                     class="bouton bouton-secondaire bouton-petit"
                                 >
                                     Rappels
                                 </a>
 
                                 <a
-                                    href="/TaskFlow/Web/supprimer-tache.php?id=<?php echo (int) $tache->getId(); ?>"
+                                    href="/TaskFlow/Web/supprimer-tache.php?id=<?php
+                                        echo (int) $tache->getId();
+                                    ?>"
                                     class="bouton bouton-danger bouton-petit"
                                 >
                                     Supprimer
