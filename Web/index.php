@@ -5,7 +5,7 @@ session_start();
 header('Content-Type: text/html; charset=UTF-8');
 
 require_once __DIR__ . '/../Config/Database.php';
-require_once __DIR__ . '/../App/Tache.php';
+require_once __DIR__ . '/../App/Entity/Tache.php';
 require_once __DIR__ . '/../App/Repository/TacheRepository.php';
 
 if (!isset($_SESSION['utilisateur_id'])) {

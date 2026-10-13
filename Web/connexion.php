@@ -5,7 +5,7 @@ session_start();
 header('Content-Type: text/html; charset=UTF-8');
 
 require_once __DIR__ . '/../Config/Database.php';
-require_once __DIR__ . '/../App/Utilisateur.php';
+require_once __DIR__ . '/../App/Entity/Utilisateur.php';
 require_once __DIR__ . '/../App/Repository/UtilisateurRepository.php';
 
 if (isset($_SESSION['utilisateur_id'])) {

@@ -1,22 +1,26 @@
 <?php
 
 require_once __DIR__ . '/../../Config/Database.php';
-require_once __DIR__ . '/../Tache.php';
+require_once __DIR__ . '/Repository.php';
+require_once __DIR__ . '/../Entity/Tache.php';
 
-class TacheRepository
+/**
+ * Repository des tâches.
+ *
+ * Toutes les opérations SQL concernant les tâches
+ * sont regroupées dans cette classe.
+ */
+class TacheRepository extends Repository
 {
-    private $database;
-
-    public function __construct(Database $database)
-    {
-        $this->database = $database;
-    }
-
+    /**
+     * Ajoute une tâche en base de données.
+     *
+     * @param Tache $tache
+     * @return Tache
+     */
     public function ajouter(Tache $tache)
     {
-        $connection = $this->database->connect();
-
-        $requete = $connection->prepare(
+        $requete = $this->pdo->prepare(
             'INSERT INTO taches
             (
                 utilisateur_id,
@@ -60,18 +64,21 @@ class TacheRepository
             ':date_modification' => $date
         ));
 
-        $tache->setId($connection->lastInsertId());
+        $tache->setId($this->pdo->lastInsertId());
         $tache->setDateCreation($date);
         $tache->setDateModification($date);
 
         return $tache;
     }
 
+    /**
+     * Récupère toutes les tâches.
+     *
+     * @return array
+     */
     public function trouverTous()
     {
-        $connection = $this->database->connect();
-
-        $requete = $connection->query(
+        $requete = $this->pdo->query(
             'SELECT
                 t.*,
                 c.nom AS categorie_nom
@@ -93,11 +100,15 @@ class TacheRepository
         return $taches;
     }
 
+    /**
+     * Récupère les tâches d'un utilisateur.
+     *
+     * @param int $utilisateurId
+     * @return array
+     */
     public function trouverParUtilisateur($utilisateurId)
     {
-        $connection = $this->database->connect();
-
-        $requete = $connection->prepare(
+        $requete = $this->pdo->prepare(
             'SELECT
                 t.*,
                 c.nom AS categorie_nom,
@@ -135,11 +146,15 @@ class TacheRepository
         return $taches;
     }
 
+    /**
+     * Récupère une tâche par son identifiant.
+     *
+     * @param int $id
+     * @return Tache|null
+     */
     public function trouverParId($id)
     {
-        $connection = $this->database->connect();
-
-        $requete = $connection->prepare(
+        $requete = $this->pdo->prepare(
             'SELECT
                 t.*,
                 c.nom AS categorie_nom,
@@ -173,11 +188,15 @@ class TacheRepository
         return $this->creerObjet($donnees);
     }
 
+    /**
+     * Modifie une tâche.
+     *
+     * @param Tache $tache
+     * @return Tache
+     */
     public function modifier(Tache $tache)
     {
-        $connection = $this->database->connect();
-
-        $requete = $connection->prepare(
+        $requete = $this->pdo->prepare(
             'UPDATE taches
              SET
                 utilisateur_id = :utilisateur_id,
@@ -212,11 +231,15 @@ class TacheRepository
         return $tache;
     }
 
+    /**
+     * Supprime une tâche.
+     *
+     * @param int $id
+     * @return bool
+     */
     public function supprimer($id)
     {
-        $connection = $this->database->connect();
-
-        $requete = $connection->prepare(
+        $requete = $this->pdo->prepare(
             'DELETE FROM taches
              WHERE id = :id'
         );
@@ -226,11 +249,15 @@ class TacheRepository
         ));
     }
 
+    /**
+     * Compte les tâches selon leur statut.
+     *
+     * @param string $statut
+     * @return int
+     */
     public function compterParStatut($statut)
     {
-        $connection = $this->database->connect();
-
-        $requete = $connection->prepare(
+        $requete = $this->pdo->prepare(
             'SELECT COUNT(*) AS total
              FROM taches
              WHERE statut = :statut'
@@ -245,11 +272,18 @@ class TacheRepository
         return (int) $donnees['total'];
     }
 
-    public function compterParUtilisateurEtStatut($utilisateurId, $statut)
-    {
-        $connection = $this->database->connect();
-
-        $requete = $connection->prepare(
+    /**
+     * Compte les tâches d'un utilisateur selon leur statut.
+     *
+     * @param int $utilisateurId
+     * @param string $statut
+     * @return int
+     */
+    public function compterParUtilisateurEtStatut(
+        $utilisateurId,
+        $statut
+    ) {
+        $requete = $this->pdo->prepare(
             'SELECT COUNT(*) AS total
              FROM taches
              WHERE utilisateur_id = :utilisateur_id
@@ -266,11 +300,15 @@ class TacheRepository
         return (int) $donnees['total'];
     }
 
+    /**
+     * Compte toutes les tâches d'un utilisateur.
+     *
+     * @param int $utilisateurId
+     * @return int
+     */
     public function compterParUtilisateur($utilisateurId)
     {
-        $connection = $this->database->connect();
-
-        $requete = $connection->prepare(
+        $requete = $this->pdo->prepare(
             'SELECT COUNT(*) AS total
              FROM taches
              WHERE utilisateur_id = :utilisateur_id'
@@ -285,6 +323,12 @@ class TacheRepository
         return (int) $donnees['total'];
     }
 
+    /**
+     * Transforme les données SQL en objet Tache.
+     *
+     * @param array $donnees
+     * @return Tache
+     */
     private function creerObjet($donnees)
     {
         $tache = new Tache();

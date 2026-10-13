@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../Config/Database.php';
-require_once __DIR__ . '/../SousTache.php';
+require_once __DIR__ . '/../Entity/SousTache.php';
 
 class SousTacheRepository
 {

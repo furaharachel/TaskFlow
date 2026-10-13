@@ -1,7 +1,10 @@
 <?php
 
-$titrePage = 'Mes tâches';
 require_once __DIR__ . '/header.php';
+
+/*
+ * Fonctions de présentation des tâches.
+ */
 
 function taskflowE($valeur)
 {
@@ -80,25 +83,6 @@ function taskflowClassePriorite($priorite)
     return 'priorite priorite-normale';
 }
 
-/*
- * Calcul des statistiques à partir des tâches déjà chargées.
- */
-
-$totalTaches = count($taches);
-$nombreAFaire = 0;
-$nombreEnCours = 0;
-$nombreTerminees = 0;
-
-foreach ($taches as $tache) {
-    if ($tache->getStatut() === 'a_faire') {
-        $nombreAFaire++;
-    } elseif ($tache->getStatut() === 'en_cours') {
-        $nombreEnCours++;
-    } elseif ($tache->getStatut() === 'terminee') {
-        $nombreTerminees++;
-    }
-}
-
 ?>
 
 <main class="page">
@@ -139,7 +123,7 @@ foreach ($taches as $tache) {
                 </div>
 
                 <p class="resume-tache-valeur">
-                    <?php echo $totalTaches; ?>
+                    <?php echo (int) $totalTaches; ?>
                 </p>
 
                 <p class="resume-tache-description">
@@ -154,7 +138,7 @@ foreach ($taches as $tache) {
                 </div>
 
                 <p class="resume-tache-valeur">
-                    <?php echo $nombreAFaire; ?>
+                    <?php echo (int) $nombreAFaire; ?>
                 </p>
 
                 <p class="resume-tache-description">
@@ -169,7 +153,7 @@ foreach ($taches as $tache) {
                 </div>
 
                 <p class="resume-tache-valeur">
-                    <?php echo $nombreEnCours; ?>
+                    <?php echo (int) $nombreEnCours; ?>
                 </p>
 
                 <p class="resume-tache-description">
@@ -184,7 +168,7 @@ foreach ($taches as $tache) {
                 </div>
 
                 <p class="resume-tache-valeur">
-                    <?php echo $nombreTerminees; ?>
+                    <?php echo (int) $nombreTerminees; ?>
                 </p>
 
                 <p class="resume-tache-description">
@@ -206,7 +190,7 @@ foreach ($taches as $tache) {
                 </div>
 
                 <span class="compteur-taches">
-                    <?php echo $totalTaches; ?>
+                    <?php echo (int) $totalTaches; ?>
                     <?php echo $totalTaches > 1 ? 'tâches' : 'tâche'; ?>
                 </span>
             </div>

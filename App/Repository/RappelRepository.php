@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../Config/Database.php';
-require_once __DIR__ . '/../Rappel.php';
+require_once __DIR__ . '/../Entity/Rappel.php';
 
 class RappelRepository
 {

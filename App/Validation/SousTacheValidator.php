@@ -1,7 +1,10 @@
 <?php
 
-require_once __DIR__ . '/SousTache.php';
+require_once __DIR__ . '/../Entity/SousTache.php';
 
+/**
+ * Valide les données d'une sous-tâche.
+ */
 class SousTacheValidator
 {
     private $erreurs = array();
@@ -25,7 +28,11 @@ class SousTacheValidator
             'terminee'
         );
 
-        if (!in_array($sousTache->getStatut(), $statutsAutorises)) {
+        if (!in_array(
+            $sousTache->getStatut(),
+            $statutsAutorises,
+            true
+        )) {
             $this->erreurs['statut'] =
                 'Le statut sélectionné est invalide.';
         }

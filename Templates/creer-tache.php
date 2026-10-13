@@ -1,103 +1,77 @@
 <?php
-$titrePage = 'Nouvelle tâche';
+
 require_once __DIR__ . '/header.php';
+
+function creerTacheE($valeur)
+{
+    return htmlspecialchars(
+        (string) $valeur,
+        ENT_QUOTES,
+        'UTF-8'
+    );
+}
 ?>
 
 <section class="page">
-
     <div class="conteneur">
 
         <section class="introduction">
-
             <div>
+                <p class="sur-titre">Gestion des tâches</p>
 
-                <p class="sur-titre">
-                    Gestion des tâches
-                </p>
-
-                <h1 class="titre-page">
-                    Nouvelle tâche
-                </h1>
+                <h1 class="titre-page">Nouvelle tâche</h1>
 
                 <p class="sous-titre">
                     Ajoutez une nouvelle tâche à votre espace.
                 </p>
-
             </div>
-
         </section>
 
         <?php if ($message !== ''): ?>
-
             <div class="message">
-                <?php echo $message; ?>
+                <?php echo creerTacheE($message); ?>
             </div>
-
         <?php endif; ?>
 
         <section class="carte">
-
-            <form
-                method="post"
-                action="/TaskFlow/Web/creer-tache.php"
-            >
+            <form method="post" action="/TaskFlow/Web/creer-tache.php">
 
                 <div>
-
-                    <label for="titre">
-                        Titre
-                    </label>
+                    <label for="titre">Titre</label>
 
                     <input
                         type="text"
                         id="titre"
                         name="titre"
-                        value="<?php echo $titre; ?>"
+                        value="<?php echo creerTacheE($titre); ?>"
                         maxlength="150"
                         required
                     >
 
                     <?php if ($erreurTitre !== ''): ?>
-
                         <p class="message">
-                            <?php echo $erreurTitre; ?>
+                            <?php echo creerTacheE($erreurTitre); ?>
                         </p>
-
                     <?php endif; ?>
-
                 </div>
 
                 <div>
-
-                    <label for="description">
-                        Description
-                    </label>
+                    <label for="description">Description</label>
 
                     <textarea
                         id="description"
                         name="description"
                         rows="5"
-                    ><?php echo $description; ?></textarea>
-
+                    ><?php echo creerTacheE($description); ?></textarea>
                 </div>
 
                 <div>
+                    <label for="categorie_id">Catégorie</label>
 
-                    <label for="categorie_id">
-                        Catégorie
-                    </label>
-
-                    <select
-                        id="categorie_id"
-                        name="categorie_id"
-                    >
-
-                        <option value="">
-                            Sans catégorie
-                        </option>
+                    <select id="categorie_id" name="categorie_id">
+                        <option value="">Sans catégorie</option>
 
                         <?php foreach ($categories as $categorie): ?>
-
                             <option
                                 value="<?php echo (int) $categorie->getId(); ?>"
                                 <?php
@@ -109,190 +83,118 @@ require_once __DIR__ . '/header.php';
                                 }
                                 ?>
                             >
-                                <?php echo htmlspecialchars(
-                                    $categorie->getNom(),
-                                    ENT_QUOTES,
-                                    'UTF-8'
-                                ); ?>
+                                <?php echo creerTacheE($categorie->getNom()); ?>
                             </option>
-
                         <?php endforeach; ?>
-
                     </select>
-
                 </div>
 
                 <div>
+                    <label for="statut">Statut</label>
 
-                    <label for="statut">
-                        Statut
-                    </label>
-
-                    <select
-                        id="statut"
-                        name="statut"
-                        required
-                    >
-
+                    <select id="statut" name="statut" required>
                         <option
                             value="a_faire"
-                            <?php
-                            echo $statut === 'a_faire'
-                                ? 'selected'
-                                : '';
-                            ?>
+                            <?php echo $statut === 'a_faire' ? 'selected' : ''; ?>
                         >
                             À faire
                         </option>
 
                         <option
                             value="en_cours"
-                            <?php
-                            echo $statut === 'en_cours'
-                                ? 'selected'
-                                : '';
-                            ?>
+                            <?php echo $statut === 'en_cours' ? 'selected' : ''; ?>
                         >
                             En cours
                         </option>
 
                         <option
                             value="terminee"
-                            <?php
-                            echo $statut === 'terminee'
-                                ? 'selected'
-                                : '';
-                            ?>
+                            <?php echo $statut === 'terminee' ? 'selected' : ''; ?>
                         >
                             Terminée
                         </option>
-
                     </select>
 
                     <?php if ($erreurStatut !== ''): ?>
-
                         <p class="message">
-                            <?php echo $erreurStatut; ?>
+                            <?php echo creerTacheE($erreurStatut); ?>
                         </p>
-
                     <?php endif; ?>
-
                 </div>
 
                 <div>
+                    <label for="priorite">Priorité</label>
 
-                    <label for="priorite">
-                        Priorité
-                    </label>
-
-                    <select
-                        id="priorite"
-                        name="priorite"
-                        required
-                    >
-
+                    <select id="priorite" name="priorite" required>
                         <option
                             value="basse"
-                            <?php
-                            echo $priorite === 'basse'
-                                ? 'selected'
-                                : '';
-                            ?>
+                            <?php echo $priorite === 'basse' ? 'selected' : ''; ?>
                         >
                             Basse
                         </option>
 
                         <option
                             value="normale"
-                            <?php
-                            echo $priorite === 'normale'
-                                ? 'selected'
-                                : '';
-                            ?>
+                            <?php echo $priorite === 'normale' ? 'selected' : ''; ?>
                         >
                             Normale
                         </option>
 
                         <option
                             value="haute"
-                            <?php
-                            echo $priorite === 'haute'
-                                ? 'selected'
-                                : '';
-                            ?>
+                            <?php echo $priorite === 'haute' ? 'selected' : ''; ?>
                         >
                             Haute
                         </option>
 
                         <option
                             value="urgente"
-                            <?php
-                            echo $priorite === 'urgente'
-                                ? 'selected'
-                                : '';
-                            ?>
+                            <?php echo $priorite === 'urgente' ? 'selected' : ''; ?>
                         >
                             Urgente
                         </option>
-
                     </select>
 
                     <?php if ($erreurPriorite !== ''): ?>
-
                         <p class="message">
-                            <?php echo $erreurPriorite; ?>
+                            <?php echo creerTacheE($erreurPriorite); ?>
                         </p>
-
                     <?php endif; ?>
-
                 </div>
 
                 <div>
-
-                    <label for="date_echeance">
-                        Date d'échéance
-                    </label>
+                    <label for="date_echeance">Date d'échéance</label>
 
                     <input
                         type="date"
                         id="date_echeance"
                         name="date_echeance"
-                        value="<?php echo $dateEcheance; ?>"
+                        value="<?php echo creerTacheE($dateEcheance); ?>"
                     >
-
                 </div>
 
                 <div>
-
-                    <label for="duree_estimee">
-                        Durée estimée
-                    </label>
+                    <label for="duree_estimee">Durée estimée</label>
 
                     <input
                         type="number"
                         id="duree_estimee"
                         name="duree_estimee"
-                        value="<?php echo $dureeEstimee; ?>"
+                        value="<?php echo creerTacheE($dureeEstimee); ?>"
                         min="1"
                         placeholder="Ex. 30"
                     >
 
-                    <p>
-                        Durée en minutes.
-                    </p>
+                    <p>Durée en minutes.</p>
 
                     <?php if ($erreurDuree !== ''): ?>
-
                         <p class="message">
-                            <?php echo $erreurDuree; ?>
+                            <?php echo creerTacheE($erreurDuree); ?>
                         </p>
-
                     <?php endif; ?>
-
                 </div>
 
                 <div>
-
                     <button
                         type="submit"
                         class="bouton bouton-principal"
@@ -306,15 +208,12 @@ require_once __DIR__ . '/header.php';
                     >
                         Annuler
                     </a>
-
                 </div>
 
             </form>
-
         </section>
 
     </div>
-
 </section>
 
 <?php require_once __DIR__ . '/footer.php'; ?>
