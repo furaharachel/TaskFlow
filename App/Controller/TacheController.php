@@ -3,70 +3,20 @@
 require_once __DIR__ . '/Controller.php';
 require_once __DIR__ . '/../Session.php';
 require_once __DIR__ . '/../../Config/Database.php';
-
-require_once __DIR__ . '/../Entity/Tache.php';
-
-require_once __DIR__ . '/../Repository/TacheRepository.php';
-require_once __DIR__ . '/../Repository/CategorieRepository.php';
-require_once __DIR__ . '/../Repository/HistoriqueRepository.php';
-
-require_once __DIR__ . '/../Validation/TacheValidator.php';
-require_once __DIR__ . '/../Service/HistoriqueService.php';
+require_once __DIR__ . '/../Service/TacheService.php';
 
 /**
- * Contrôleur principal de la gestion des tâches.
- *
- * Responsabilités :
- * - afficher la liste des tâches et les statistiques ;
- * - créer une tâche ;
- * - modifier une tâche ;
- * - supprimer une tâche ;
- * - contrôler l'accès aux tâches ;
- * - transmettre les données aux vues.
- *
- * Les requêtes SQL restent dans les repositories.
- * Les règles de validation restent dans TacheValidator.
+ * Contrôleur HTTP des tâches.
  */
 class TacheController extends Controller
 {
-    private $database;
-    private $tacheRepository;
-    private $categorieRepository;
-    private $historiqueService;
+    private $tacheService;
 
-    /**
-     * Initialise les dépendances du contrôleur.
-     */
     public function __construct(Database $database)
     {
-        $this->database = $database;
-
-        $this->tacheRepository = new TacheRepository(
-            $this->database
-        );
-
-        $this->categorieRepository = new CategorieRepository(
-            $this->database
-        );
-
-        $historiqueRepository = new HistoriqueRepository(
-            $this->database
-        );
-
-        $this->historiqueService = new HistoriqueService(
-            $historiqueRepository
-        );
+        $this->tacheService = new TacheService($database);
     }
 
-    /*
-     * =========================================================
-     * AUTHENTIFICATION ET AUTORISATIONS
-     * =========================================================
-     */
-
-    /**
-     * Vérifie la session et retourne l'identifiant utilisateur.
-     */
     private function obtenirUtilisateurConnecte()
     {
         Session::demarrer();
@@ -79,55 +29,23 @@ class TacheController extends Controller
     }
 
     /**
-     * Recherche une tâche appartenant à l'utilisateur connecté.
-     *
-     * Retourne null si la tâche n'existe pas ou appartient
-     * à un autre utilisateur.
-     */
-    private function obtenirTacheAutorisee($id, $utilisateurId)
-    {
-        $id = (int) $id;
-
-        if ($id <= 0) {
-            return null;
-        }
-
-        $tache = $this->tacheRepository->trouverParId($id);
-
-        if (
-            $tache === null
-            || (int) $tache->getUtilisateurId() !== (int) $utilisateurId
-        ) {
-            return null;
-        }
-
-        return $tache;
-    }
-
-    /*
-     * =========================================================
-     * AFFICHAGE DE LA LISTE ET STATISTIQUES
-     * =========================================================
-     */
-
-    /**
-     * Affiche les tâches de l'utilisateur connecté.
+     * Liste des tâches.
      */
     public function index()
     {
         $utilisateurId = $this->obtenirUtilisateurConnecte();
 
-        $taches = $this->tacheRepository->trouverParUtilisateur(
+        $resultat = $this->tacheService->listerParUtilisateur(
             $utilisateurId
         );
 
-        $statistiques = $this->calculerStatistiques($taches);
+        $statistiques = $resultat['statistiques'];
 
         $this->afficherVue(
             __DIR__ . '/../../Templates/taches.php',
             array(
                 'titrePage' => 'Mes tâches',
-                'taches' => $taches,
+                'taches' => $resultat['taches'],
                 'totalTaches' => $statistiques['total'],
                 'nombreAFaire' => $statistiques['a_faire'],
                 'nombreEnCours' => $statistiques['en_cours'],
@@ -137,90 +55,38 @@ class TacheController extends Controller
     }
 
     /**
-     * Calcule les statistiques des tâches chargées.
-     */
-    private function calculerStatistiques($taches)
-    {
-        $statistiques = array(
-            'total' => count($taches),
-            'a_faire' => 0,
-            'en_cours' => 0,
-            'terminees' => 0
-        );
-
-        foreach ($taches as $tache) {
-            $statut = $tache->getStatut();
-
-            if ($statut === 'a_faire') {
-                $statistiques['a_faire']++;
-            } elseif ($statut === 'en_cours') {
-                $statistiques['en_cours']++;
-            } elseif ($statut === 'terminee') {
-                $statistiques['terminees']++;
-            }
-        }
-
-        return $statistiques;
-    }
-
-    /*
-     * =========================================================
-     * CRÉATION D'UNE TÂCHE
-     * =========================================================
-     */
-
-    /**
-     * Affiche et traite le formulaire de création.
+     * Formulaire de création.
      */
     public function creer()
     {
         $utilisateurId = $this->obtenirUtilisateurConnecte();
 
-        $valeurs = $this->valeursParDefaut();
-
+        $valeurs = $this->valeursInitiales();
         $erreurs = array();
         $message = '';
 
         $categories = $this->chargerCategories($message);
 
         if ($this->requeteEstPost()) {
-            $valeurs = $this->lireDonneesFormulaire($valeurs);
+            $valeurs = $this->lireValeursPost($valeurs);
 
-            $tache = new Tache();
-
-            $this->remplirTache(
-                $tache,
+            $resultat = $this->tacheService->creer(
                 $utilisateurId,
-                $valeurs
+                $_POST
             );
 
-            $validator = new TacheValidator();
-
-            if ($validator->valider($tache)) {
-                try {
-                    $this->enregistrerCreation(
-                        $tache,
-                        $utilisateurId
-                    );
-
-                    $this->rediriger('/TaskFlow/Web/taches.php');
-
-                } catch (Exception $exception) {
-                    $message =
-                        'Impossible de créer la tâche. Réessayez.';
-                }
-            } else {
-                $erreurs = $validator->getErreurs();
-
-                $message =
-                    'Veuillez corriger les erreurs du formulaire.';
+            if ($resultat['succes']) {
+                $this->rediriger('/TaskFlow/Web/taches.php');
             }
+
+            $erreurs = $resultat['erreurs'];
+            $message = $resultat['message'];
         }
 
         $this->afficherFormulaire(
             'creer',
             0,
-            false,
+            true,
             $valeurs,
             $categories,
             $erreurs,
@@ -229,52 +95,14 @@ class TacheController extends Controller
     }
 
     /**
-     * Enregistre la tâche et son historique dans une transaction.
-     */
-    private function enregistrerCreation(
-        Tache $tache,
-        $utilisateurId
-    ) {
-        $connection = $this->database->connect();
-
-        $connection->beginTransaction();
-
-        try {
-            $this->tacheRepository->ajouter($tache);
-
-            $this->historiqueService->enregistrer(
-                $utilisateurId,
-                $tache->getId(),
-                'creation',
-                'La tâche "' . $tache->getTitre()
-                    . '" a été créée.'
-            );
-
-            $connection->commit();
-
-        } catch (Exception $exception) {
-            if ($connection->inTransaction()) {
-                $connection->rollBack();
-            }
-
-            throw $exception;
-        }
-    }
-
-    /*
-     * =========================================================
-     * MODIFICATION D'UNE TÂCHE
-     * =========================================================
-     */
-
-    /**
-     * Affiche et traite le formulaire de modification.
+     * Formulaire de modification.
      */
     public function modifier($id)
     {
         $utilisateurId = $this->obtenirUtilisateurConnecte();
+        $id = (int) $id;
 
-        $tache = $this->obtenirTacheAutorisee(
+        $tache = $this->tacheService->trouverPourUtilisateur(
             $id,
             $utilisateurId
         );
@@ -284,44 +112,35 @@ class TacheController extends Controller
         }
 
         $valeurs = $this->valeursDepuisTache($tache);
-
         $erreurs = array();
         $message = '';
 
         $categories = $this->chargerCategories($message);
 
         if ($this->requeteEstPost()) {
-            $valeurs = $this->lireDonneesFormulaire($valeurs);
+            $valeurs = $this->lireValeursPost($valeurs);
 
-            $this->remplirTache(
-                $tache,
+            $resultat = $this->tacheService->modifier(
+                $id,
                 $utilisateurId,
-                $valeurs
+                $_POST
             );
 
-            $validator = new TacheValidator();
-
-            if ($validator->valider($tache)) {
-                try {
-                    $this->tacheRepository->modifier($tache);
-
-                    $this->rediriger('/TaskFlow/Web/taches.php');
-
-                } catch (Exception $exception) {
-                    $message =
-                        'Impossible d’enregistrer les modifications.';
-                }
-            } else {
-                $erreurs = $validator->getErreurs();
-
-                $message =
-                    'Veuillez corriger les erreurs du formulaire.';
+            if ($resultat['introuvable']) {
+                $this->rediriger('/TaskFlow/Web/taches.php');
             }
+
+            if ($resultat['succes']) {
+                $this->rediriger('/TaskFlow/Web/taches.php');
+            }
+
+            $erreurs = $resultat['erreurs'];
+            $message = $resultat['message'];
         }
 
         $this->afficherFormulaire(
             'modifier',
-            (int) $id,
+            $id,
             true,
             $valeurs,
             $categories,
@@ -330,68 +149,22 @@ class TacheController extends Controller
         );
     }
 
-    /*
-     * =========================================================
-     * SUPPRESSION D'UNE TÂCHE
-     * =========================================================
-     */
-
     /**
-     * Supprime une tâche et enregistre son historique.
+     * Suppression d'une tâche.
      */
     public function supprimer($id)
     {
         $utilisateurId = $this->obtenirUtilisateurConnecte();
 
-        $tache = $this->obtenirTacheAutorisee(
-            $id,
+        $resultat = $this->tacheService->supprimer(
+            (int) $id,
             $utilisateurId
         );
-
-        if ($tache === null) {
-            $this->rediriger('/TaskFlow/Web/taches.php');
-        }
-
-        $connection = $this->database->connect();
-
-        $connection->beginTransaction();
-
-        try {
-            $this->historiqueService->enregistrer(
-                $utilisateurId,
-                $tache->getId(),
-                'suppression',
-                'La tâche "' . $tache->getTitre()
-                    . '" a été supprimée.'
-            );
-
-            $this->tacheRepository->supprimer(
-                $tache->getId()
-            );
-
-            $connection->commit();
-
-        } catch (Exception $exception) {
-            if ($connection->inTransaction()) {
-                $connection->rollBack();
-            }
-
-            throw $exception;
-        }
 
         $this->rediriger('/TaskFlow/Web/taches.php');
     }
 
-    /*
-     * =========================================================
-     * PRÉPARATION DES FORMULAIRES
-     * =========================================================
-     */
-
-    /**
-     * Retourne les valeurs initiales d'une nouvelle tâche.
-     */
-    private function valeursParDefaut()
+    private function valeursInitiales()
     {
         return array(
             'titre' => '',
@@ -404,36 +177,26 @@ class TacheController extends Controller
         );
     }
 
-    /**
-     * Récupère les valeurs d'une tâche existante.
-     */
-    private function valeursDepuisTache(Tache $tache)
+    private function valeursDepuisTache($tache)
     {
         return array(
             'titre' => $tache->getTitre(),
             'description' => $tache->getDescription(),
-
             'categorieId' => $tache->getCategorieId() === null
                 ? ''
                 : (string) $tache->getCategorieId(),
-
             'statut' => $tache->getStatut(),
             'priorite' => $tache->getPriorite(),
-
             'dateEcheance' => $tache->getDateEcheance() === null
                 ? ''
                 : $tache->getDateEcheance(),
-
             'dureeEstimee' => $tache->getDureeEstimee() === null
                 ? ''
                 : (string) $tache->getDureeEstimee()
         );
     }
 
-    /**
-     * Lit les données simples envoyées par le formulaire.
-     */
-    private function lireDonneesFormulaire($valeurs)
+    private function lireValeursPost($valeurs)
     {
         $correspondance = array(
             'titre' => 'titre',
@@ -450,76 +213,23 @@ class TacheController extends Controller
                 isset($_POST[$champ])
                 && is_scalar($_POST[$champ])
             ) {
-                $valeurs[$cle] = trim(
-                    (string) $_POST[$champ]
-                );
+                $valeurs[$cle] = trim((string) $_POST[$champ]);
             }
         }
 
         return $valeurs;
     }
 
-    /**
-     * Remplit une entité avec les valeurs du formulaire.
-     */
-    private function remplirTache(
-        Tache $tache,
-        $utilisateurId,
-        $valeurs
-    ) {
-        $tache->setUtilisateurId($utilisateurId);
-        $tache->setTitre($valeurs['titre']);
-        $tache->setDescription($valeurs['description']);
-
-        $categorieId = $valeurs['categorieId'];
-
-        if (
-            $categorieId !== ''
-            && is_numeric($categorieId)
-            && (int) $categorieId > 0
-        ) {
-            $tache->setCategorieId((int) $categorieId);
-        } else {
-            $tache->setCategorieId(null);
-        }
-
-        $tache->setStatut($valeurs['statut']);
-        $tache->setPriorite($valeurs['priorite']);
-
-        $tache->setDateEcheance(
-            $valeurs['dateEcheance'] !== ''
-                ? $valeurs['dateEcheance']
-                : null
-        );
-
-        /*
-         * La valeur reste une chaîne à ce stade afin que
-         * TacheValidator puisse contrôler la durée saisie.
-         */
-        $tache->setDureeEstimee(
-            $valeurs['dureeEstimee'] !== ''
-                ? $valeurs['dureeEstimee']
-                : null
-        );
-    }
-
-    /**
-     * Charge les catégories disponibles pour le formulaire.
-     */
     private function chargerCategories(&$message)
     {
         try {
-            return $this->categorieRepository->trouverTous();
+            return $this->tacheService->obtenirCategories();
         } catch (Exception $exception) {
             $message = 'Impossible de charger les catégories.';
-
             return array();
         }
     }
 
-    /**
-     * Prépare les variables et affiche la vue appropriée.
-     */
     private function afficherFormulaire(
         $mode,
         $id,
@@ -529,49 +239,35 @@ class TacheController extends Controller
         $erreurs,
         $message
     ) {
-        $donneesErreurs = array(
-            'erreurTitre' => isset($erreurs['titre'])
-                ? $erreurs['titre']
-                : '',
-
-            'erreurStatut' => isset($erreurs['statut'])
-                ? $erreurs['statut']
-                : '',
-
-            'erreurPriorite' => isset($erreurs['priorite'])
-                ? $erreurs['priorite']
-                : '',
-
-            'erreurDuree' => isset($erreurs['duree_estimee'])
-                ? $erreurs['duree_estimee']
-                : ''
-        );
-
-        $donneesPage = array(
-            'titrePage' => $mode === 'creer'
-                ? 'Nouvelle tâche'
-                : 'Modifier une tâche',
-
-            'id' => (int) $id,
-            'tacheExiste' => $tacheExiste,
-            'categories' => $categories,
-            'erreurs' => $erreurs,
-            'message' => $message
-        );
-
         $donnees = array_merge(
             $valeurs,
-            $donneesErreurs,
-            $donneesPage
+            array(
+                'titrePage' => $mode === 'creer'
+                    ? 'Nouvelle tâche'
+                    : 'Modifier une tâche',
+                'id' => (int) $id,
+                'tacheExiste' => $tacheExiste,
+                'categories' => $categories,
+                'erreurs' => $erreurs,
+                'message' => $message,
+                'erreurTitre' => isset($erreurs['titre'])
+                    ? $erreurs['titre']
+                    : '',
+                'erreurStatut' => isset($erreurs['statut'])
+                    ? $erreurs['statut']
+                    : '',
+                'erreurPriorite' => isset($erreurs['priorite'])
+                    ? $erreurs['priorite']
+                    : '',
+                'erreurDuree' => isset($erreurs['duree_estimee'])
+                    ? $erreurs['duree_estimee']
+                    : ''
+            )
         );
 
-        if ($mode === 'creer') {
-            $cheminVue = __DIR__
-                . '/../../Templates/creer-tache.php';
-        } else {
-            $cheminVue = __DIR__
-                . '/../../Templates/modifier-tache.php';
-        }
+        $cheminVue = $mode === 'creer'
+            ? __DIR__ . '/../../Templates/creer-tache.php'
+            : __DIR__ . '/../../Templates/modifier-tache.php';
 
         $this->afficherVue($cheminVue, $donnees);
     }
