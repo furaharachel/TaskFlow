@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../Entity/Categorie.php';
+require_once __DIR__ . '/Validator.php';
 
 class CategorieValidator
 {
@@ -10,12 +11,12 @@ class CategorieValidator
     {
         $this->erreurs = array();
 
-        $nom = trim($categorie->getNom());
+        $nom = trim((string) $categorie->getNom());
 
-        if ($nom === '') {
+        if (!Validator::requis($nom)) {
             $this->erreurs['nom'] =
                 'Le nom de la catégorie est obligatoire.';
-        } elseif (strlen($nom) > 100) {
+        } elseif (!Validator::longueurMaximale($nom, 100)) {
             $this->erreurs['nom'] =
                 'Le nom ne peut pas dépasser 100 caractères.';
         }

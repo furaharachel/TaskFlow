@@ -1,36 +1,23 @@
 <?php
 
 require_once __DIR__ . '/Controller.php';
+require_once __DIR__ . '/../Service/CategorieService.php';
 require_once __DIR__ . '/../../Config/Database.php';
-require_once __DIR__ . '/../Entity/Categorie.php';
-require_once __DIR__ . '/../Repository/CategorieRepository.php';
-require_once __DIR__ . '/../Validation/CategorieValidator.php';
 
-/**
- * Contrôleur responsable de la gestion des catégories.
- */
 class CategorieController extends Controller
 {
-    private $categorieRepository;
-    private $validator;
+    private $categorieService;
 
     public function __construct(Database $database)
     {
-        $this->categorieRepository = new CategorieRepository($database);
-        $this->validator = new CategorieValidator();
+        $this->categorieService = new CategorieService($database);
     }
 
-    /**
-     * Affiche la liste des catégories.
-     */
     public function index()
     {
         $this->afficherListe();
     }
 
-    /**
-     * Affiche et traite le formulaire de création.
-     */
     public function creer()
     {
         $erreurs = array();
@@ -38,28 +25,20 @@ class CategorieController extends Controller
         $nom = '';
         $description = '';
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $nom = isset($_POST['nom'])
-                ? trim($_POST['nom'])
-                : '';
+        if ($this->requeteEstPost()) {
+            $nom = $this->obtenirPost('nom');
+            $description = $this->obtenirPost('description');
 
-            $description = isset($_POST['description'])
-                ? trim($_POST['description'])
-                : '';
+            $resultat = $this->categorieService->creer(
+                trim($nom),
+                trim($description)
+            );
 
-            $categorie = new Categorie();
-            $categorie->setNom($nom);
-            $categorie->setDescription($description);
+            $erreurs = $resultat['erreurs'];
+            $message = $resultat['message'];
 
-            if ($this->validator->valider($categorie)) {
-                try {
-                    $this->categorieRepository->ajouter($categorie);
-                    $this->rediriger('categories.php');
-                } catch (PDOException $exception) {
-                    $message = 'Impossible de créer la catégorie.';
-                }
-            } else {
-                $erreurs = $this->validator->getErreurs();
+            if ($resultat['succes']) {
+                $this->rediriger('categories.php');
             }
         }
 
@@ -75,18 +54,15 @@ class CategorieController extends Controller
         );
     }
 
-    /**
-     * Affiche et traite le formulaire de modification.
-     */
     public function modifier($id)
     {
-        $id = (int) $id;
-
-        if ($id <= 0) {
+        if (!$this->idValide($id)) {
             $this->rediriger('categories.php');
         }
 
-        $categorie = $this->categorieRepository->trouverParId($id);
+        $id = (int) $id;
+
+        $categorie = $this->categorieService->trouverParId($id);
 
         if ($categorie === null) {
             $this->rediriger('categories.php');
@@ -95,27 +71,21 @@ class CategorieController extends Controller
         $erreurs = array();
         $message = '';
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $nom = isset($_POST['nom'])
-                ? trim($_POST['nom'])
-                : '';
+        if ($this->requeteEstPost()) {
+            $nom = $this->obtenirPost('nom');
+            $description = $this->obtenirPost('description');
 
-            $description = isset($_POST['description'])
-                ? trim($_POST['description'])
-                : '';
+            $resultat = $this->categorieService->modifier(
+                $categorie,
+                trim($nom),
+                trim($description)
+            );
 
-            $categorie->setNom($nom);
-            $categorie->setDescription($description);
+            $erreurs = $resultat['erreurs'];
+            $message = $resultat['message'];
 
-            if ($this->validator->valider($categorie)) {
-                try {
-                    $this->categorieRepository->modifier($categorie);
-                    $this->rediriger('categories.php');
-                } catch (PDOException $exception) {
-                    $message = 'Impossible de modifier la catégorie.';
-                }
-            } else {
-                $erreurs = $this->validator->getErreurs();
+            if ($resultat['succes']) {
+                $this->rediriger('categories.php');
             }
         }
 
@@ -131,38 +101,24 @@ class CategorieController extends Controller
         );
     }
 
-    /**
-     * Supprime une catégorie.
-     */
     public function supprimer($id)
     {
-        $id = (int) $id;
+        $resultat = $this->categorieService->supprimer($id);
 
-        if ($id <= 0) {
-            $this->rediriger('categories.php');
-        }
-
-        try {
-            $this->categorieRepository->supprimer($id);
-        } catch (PDOException $exception) {
-            $this->afficherListe(
-                'Impossible de supprimer la catégorie.'
-            );
+        if (!$resultat['succes']) {
+            $this->afficherListe($resultat['message']);
             return;
         }
 
         $this->rediriger('categories.php');
     }
 
-    /**
-     * Charge les catégories et affiche leur vue.
-     */
     private function afficherListe($erreur = '')
     {
         $categories = array();
 
         try {
-            $categories = $this->categorieRepository->trouverTous();
+            $categories = $this->categorieService->lister();
         } catch (PDOException $exception) {
             $erreur = 'Impossible de charger les catégories.';
         }
@@ -175,5 +131,12 @@ class CategorieController extends Controller
                 'erreur' => $erreur
             )
         );
+    }
+
+    private function idValide($id)
+    {
+        return is_scalar($id)
+            && is_numeric($id)
+            && (int) $id > 0;
     }
 }

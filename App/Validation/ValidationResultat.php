@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Represente le resultat d'une validation.
+ * Compatible avec PHP 5.5.12.
+ */
 class ValidationResultat
 {
     private $erreurs;

@@ -1,10 +1,8 @@
 <?php
 
 require_once __DIR__ . '/../Entity/SousTache.php';
+require_once __DIR__ . '/Validator.php';
 
-/**
- * Valide les données d'une sous-tâche.
- */
 class SousTacheValidator
 {
     private $erreurs = array();
@@ -13,12 +11,12 @@ class SousTacheValidator
     {
         $this->erreurs = array();
 
-        $titre = trim($sousTache->getTitre());
+        $titre = trim((string) $sousTache->getTitre());
 
-        if ($titre === '') {
+        if (!Validator::requis($titre)) {
             $this->erreurs['titre'] =
                 'Le titre de la sous-tâche est obligatoire.';
-        } elseif (strlen($titre) > 150) {
+        } elseif (!Validator::longueurMaximale($titre, 150)) {
             $this->erreurs['titre'] =
                 'Le titre ne peut pas dépasser 150 caractères.';
         }
@@ -28,10 +26,9 @@ class SousTacheValidator
             'terminee'
         );
 
-        if (!in_array(
+        if (!Validator::valeurAutorisee(
             $sousTache->getStatut(),
-            $statutsAutorises,
-            true
+            $statutsAutorises
         )) {
             $this->erreurs['statut'] =
                 'Le statut sélectionné est invalide.';

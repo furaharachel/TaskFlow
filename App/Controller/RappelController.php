@@ -3,35 +3,16 @@
 require_once __DIR__ . '/Controller.php';
 require_once __DIR__ . '/../Session.php';
 require_once __DIR__ . '/../../Config/Database.php';
+require_once __DIR__ . '/../Service/RappelService.php';
 
-require_once __DIR__ . '/../Entity/Tache.php';
-require_once __DIR__ . '/../Entity/Rappel.php';
-
-require_once __DIR__ . '/../Repository/TacheRepository.php';
-require_once __DIR__ . '/../Repository/RappelRepository.php';
-
-require_once __DIR__ . '/../Validation/RappelValidator.php';
-
-/**
- * Contrôleur de gestion des rappels.
- */
 class RappelController extends Controller
 {
-    private $database;
-    private $tacheRepository;
-    private $rappelRepository;
+    private $rappelService;
 
     public function __construct(Database $database)
     {
-        $this->database = $database;
-
-        $this->tacheRepository = new TacheRepository($database);
-        $this->rappelRepository = new RappelRepository($database);
+        $this->rappelService = new RappelService($database);
     }
-
-    /*
-     * AUTHENTIFICATION ET AUTORISATIONS
-     */
 
     private function obtenirUtilisateurConnecte()
     {
@@ -44,63 +25,21 @@ class RappelController extends Controller
         return (int) Session::obtenirUtilisateurId();
     }
 
-    private function obtenirTacheAutorisee($tacheId, $utilisateurId)
-    {
-        $tacheId = (int) $tacheId;
-
-        if ($tacheId <= 0) {
-            return null;
-        }
-
-        $tache = $this->tacheRepository->trouverParId($tacheId);
-
-        if (
-            $tache === null
-            || (int) $tache->getUtilisateurId() !== (int) $utilisateurId
-        ) {
-            return null;
-        }
-
-        return $tache;
-    }
-
-    private function obtenirRappelAutorise($id, $utilisateurId)
-    {
-        $rappel = $this->rappelRepository->trouverParId((int) $id);
-
-        if ($rappel === null) {
-            return null;
-        }
-
-        $tache = $this->obtenirTacheAutorisee(
-            $rappel->getTacheId(),
-            $utilisateurId
-        );
-
-        if ($tache === null) {
-            return null;
-        }
-
-        return $rappel;
-    }
-
-    /*
-     * LISTE ET CRÉATION
-     */
-
     public function index($tacheId)
     {
         $utilisateurId = $this->obtenirUtilisateurConnecte();
-        $tacheId = (int) $tacheId;
 
-        $tache = $this->obtenirTacheAutorisee(
+        $contexte = $this->rappelService->obtenirListePourTache(
             $tacheId,
             $utilisateurId
         );
 
-        if ($tache === null) {
+        if ($contexte === null) {
             $this->rediriger('/TaskFlow/Web/taches.php');
         }
+
+        $tacheId = (int) $tacheId;
+        $tache = $contexte['tache'];
 
         $dateRappel = '';
         $messageRappel = '';
@@ -116,42 +55,31 @@ class RappelController extends Controller
                 (string) $this->obtenirPost('message', '')
             );
 
-            $rappel = new Rappel();
-
-            $rappel->setTacheId($tacheId);
-            $rappel->setDateRappel(
-                str_replace('T', ' ', $dateRappel)
+            $resultat = $this->rappelService->creer(
+                $tacheId,
+                $utilisateurId,
+                $dateRappel,
+                $messageRappel
             );
-            $rappel->setMessage($messageRappel);
-            $rappel->setStatut('actif');
 
-            $validator = new RappelValidator();
+            if ($resultat['succes']) {
+                $this->rediriger(
+                    '/TaskFlow/Web/rappels.php?id=' . $tacheId
+                );
+            }
 
-            if ($validator->valider($rappel)) {
-                try {
-                    $this->rappelRepository->ajouter($rappel);
+            $erreurs = $resultat['erreurs'];
 
-                    $this->rediriger(
-                        '/TaskFlow/Web/rappels.php?id=' . $tacheId
-                    );
-                } catch (PDOException $exception) {
-                    $erreurMessageRappel =
-                        'Impossible de créer le rappel.';
-                }
-            } else {
-                $erreurs = $validator->getErreurs();
+            if (isset($erreurs['date_rappel'])) {
+                $erreurDateRappel = $erreurs['date_rappel'];
+            }
 
-                if (isset($erreurs['date_rappel'])) {
-                    $erreurDateRappel = $erreurs['date_rappel'];
-                }
-
-                if (isset($erreurs['message'])) {
-                    $erreurMessageRappel = $erreurs['message'];
-                }
+            if (isset($erreurs['message'])) {
+                $erreurMessageRappel = $erreurs['message'];
+            } elseif ($resultat['message'] !== '') {
+                $erreurMessageRappel = $resultat['message'];
             }
         }
-
-        $rappels = $this->rappelRepository->trouverParTache($tacheId);
 
         $this->afficherVue(
             __DIR__ . '/../../Templates/rappels.php',
@@ -163,34 +91,27 @@ class RappelController extends Controller
                 'messageRappel' => $messageRappel,
                 'erreurDateRappel' => $erreurDateRappel,
                 'erreurMessageRappel' => $erreurMessageRappel,
-                'rappels' => $rappels
+                'rappels' => $contexte['rappels']
             )
         );
     }
-
-    /*
-     * MODIFICATION
-     */
 
     public function modifier($id)
     {
         $utilisateurId = $this->obtenirUtilisateurConnecte();
 
-        $rappel = $this->obtenirRappelAutorise(
-            (int) $id,
+        $contexte = $this->rappelService->obtenirPourModification(
+            $id,
             $utilisateurId
         );
 
-        if ($rappel === null) {
+        if ($contexte === null) {
             $this->rediriger('/TaskFlow/Web/taches.php');
         }
 
+        $rappel = $contexte['rappel'];
+        $tache = $contexte['tache'];
         $tacheId = (int) $rappel->getTacheId();
-
-        $tache = $this->obtenirTacheAutorisee(
-            $tacheId,
-            $utilisateurId
-        );
 
         $dateRappel = $this->formaterDatePourFormulaire(
             $rappel->getDateRappel()
@@ -218,42 +139,41 @@ class RappelController extends Controller
                 (string) $this->obtenirPost('statut', '')
             );
 
-            $rappel->setDateRappel(
-                str_replace('T', ' ', $dateRappel)
+            $resultat = $this->rappelService->modifier(
+                $id,
+                $utilisateurId,
+                $dateRappel,
+                $messageRappel,
+                $statut
             );
 
-            $rappel->setMessage($messageRappel);
-            $rappel->setStatut($statut);
+            if ($resultat['succes']) {
+                $this->rediriger(
+                    '/TaskFlow/Web/rappels.php?id=' . $tacheId
+                );
+            }
 
-            $validator = new RappelValidator();
+            $erreurs = $resultat['erreurs'];
+            $message = $resultat['message'];
 
-            if ($validator->valider($rappel)) {
-                try {
-                    $this->rappelRepository->modifier($rappel);
-
-                    $this->rediriger(
-                        '/TaskFlow/Web/rappels.php?id=' . $tacheId
-                    );
-                } catch (PDOException $exception) {
-                    $message =
-                        'Impossible d’enregistrer les modifications.';
-                }
-            } else {
-                $erreurs = $validator->getErreurs();
-
+            if (!empty($erreurs) && $message === '') {
                 $message = 'Veuillez corriger les erreurs du formulaire.';
+            }
 
-                if (isset($erreurs['date_rappel'])) {
-                    $erreurDateRappel = $erreurs['date_rappel'];
-                }
+            if (isset($erreurs['date_rappel'])) {
+                $erreurDateRappel = $erreurs['date_rappel'];
+            }
 
-                if (isset($erreurs['message'])) {
-                    $erreurMessageRappel = $erreurs['message'];
-                }
+            if (isset($erreurs['message'])) {
+                $erreurMessageRappel = $erreurs['message'];
+            }
 
-                if (isset($erreurs['statut'])) {
-                    $erreurStatut = $erreurs['statut'];
-                }
+            if (isset($erreurs['statut'])) {
+                $erreurStatut = $erreurs['statut'];
+            }
+
+            if ($resultat['tacheId'] === null) {
+                $this->rediriger('/TaskFlow/Web/taches.php');
             }
         }
 
@@ -276,41 +196,24 @@ class RappelController extends Controller
         );
     }
 
-    /*
-     * SUPPRESSION
-     */
-
     public function supprimer($id)
     {
         $utilisateurId = $this->obtenirUtilisateurConnecte();
 
-        $rappel = $this->obtenirRappelAutorise(
-            (int) $id,
+        $resultat = $this->rappelService->supprimer(
+            $id,
             $utilisateurId
         );
 
-        if ($rappel === null) {
+        if (empty($resultat['tacheId'])) {
             $this->rediriger('/TaskFlow/Web/taches.php');
         }
 
-        $tacheId = (int) $rappel->getTacheId();
-
-        try {
-            $this->rappelRepository->supprimer($rappel->getId());
-        } catch (PDOException $exception) {
-            $this->rediriger(
-                '/TaskFlow/Web/rappels.php?id=' . $tacheId
-            );
-        }
-
         $this->rediriger(
-            '/TaskFlow/Web/rappels.php?id=' . $tacheId
+            '/TaskFlow/Web/rappels.php?id='
+            . (int) $resultat['tacheId']
         );
     }
-
-    /*
-     * OUTILS PRIVÉS
-     */
 
     private function formaterDatePourFormulaire($date)
     {

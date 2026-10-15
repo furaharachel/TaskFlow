@@ -1,20 +1,13 @@
 <?php
 
-require_once __DIR__ . '/../../Config/Database.php';
+require_once __DIR__ . '/Repository.php';
 require_once __DIR__ . '/../Entity/SousTache.php';
 
-class SousTacheRepository
+class SousTacheRepository extends Repository
 {
-    private $database;
-
-    public function __construct(Database $database)
-    {
-        $this->database = $database;
-    }
-
     public function ajouter(SousTache $sousTache)
     {
-        $connection = $this->database->connect();
+        $connection = $this->getPdo();
 
         $requete = $connection->prepare(
             'INSERT INTO sous_taches
@@ -54,9 +47,11 @@ class SousTacheRepository
 
     public function trouverParTache($tacheId)
     {
-        $connection = $this->database->connect();
+        if (!$this->idValide($tacheId)) {
+            return array();
+        }
 
-        $requete = $connection->prepare(
+        $requete = $this->getPdo()->prepare(
             'SELECT *
              FROM sous_taches
              WHERE tache_id = :tache_id
@@ -64,12 +59,12 @@ class SousTacheRepository
         );
 
         $requete->execute(array(
-            ':tache_id' => $tacheId
+            ':tache_id' => (int) $tacheId
         ));
 
         $sousTaches = array();
 
-        while ($donnees = $requete->fetch()) {
+        while ($donnees = $requete->fetch(PDO::FETCH_ASSOC)) {
             $sousTaches[] = $this->creerObjet($donnees);
         }
 
@@ -78,19 +73,21 @@ class SousTacheRepository
 
     public function trouverParId($id)
     {
-        $connection = $this->database->connect();
+        if (!$this->idValide($id)) {
+            return null;
+        }
 
-        $requete = $connection->prepare(
+        $requete = $this->getPdo()->prepare(
             'SELECT *
              FROM sous_taches
              WHERE id = :id'
         );
 
         $requete->execute(array(
-            ':id' => $id
+            ':id' => (int) $id
         ));
 
-        $donnees = $requete->fetch();
+        $donnees = $requete->fetch(PDO::FETCH_ASSOC);
 
         if (!$donnees) {
             return null;
@@ -101,7 +98,7 @@ class SousTacheRepository
 
     public function modifier(SousTache $sousTache)
     {
-        $connection = $this->database->connect();
+        $connection = $this->getPdo();
 
         $requete = $connection->prepare(
             'UPDATE sous_taches
@@ -128,42 +125,48 @@ class SousTacheRepository
 
     public function supprimer($id)
     {
-        $connection = $this->database->connect();
+        if (!$this->idValide($id)) {
+            return false;
+        }
 
-        $requete = $connection->prepare(
+        $requete = $this->getPdo()->prepare(
             'DELETE FROM sous_taches
              WHERE id = :id'
         );
 
         return $requete->execute(array(
-            ':id' => $id
+            ':id' => (int) $id
         ));
     }
 
     public function compterParTache($tacheId)
     {
-        $connection = $this->database->connect();
+        if (!$this->idValide($tacheId)) {
+            return 0;
+        }
 
-        $requete = $connection->prepare(
+        $requete = $this->getPdo()->prepare(
             'SELECT COUNT(*) AS total
              FROM sous_taches
              WHERE tache_id = :tache_id'
         );
 
         $requete->execute(array(
-            ':tache_id' => $tacheId
+            ':tache_id' => (int) $tacheId
         ));
 
-        $donnees = $requete->fetch();
+        $donnees = $requete->fetch(PDO::FETCH_ASSOC);
 
         return (int) $donnees['total'];
     }
 
     public function compterTermineesParTache($tacheId)
     {
-        $connection = $this->database->connect();
+        if (!$this->idValide($tacheId)) {
+            return 0;
+        }
 
-        $requete = $connection->prepare(
+        $requete = $this->getPdo()->prepare(
             'SELECT COUNT(*) AS total
              FROM sous_taches
              WHERE tache_id = :tache_id
@@ -171,11 +174,11 @@ class SousTacheRepository
         );
 
         $requete->execute(array(
-            ':tache_id' => $tacheId,
+            ':tache_id' => (int) $tacheId,
             ':statut' => 'terminee'
         ));
 
-        $donnees = $requete->fetch();
+        $donnees = $requete->fetch(PDO::FETCH_ASSOC);
 
         return (int) $donnees['total'];
     }

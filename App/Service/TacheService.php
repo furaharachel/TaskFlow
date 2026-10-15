@@ -1,11 +1,11 @@
 <?php
 
 require_once __DIR__ . '/../../Config/Database.php';
+
 require_once __DIR__ . '/../Entity/Tache.php';
 
 require_once __DIR__ . '/../Repository/TacheRepository.php';
 require_once __DIR__ . '/../Repository/CategorieRepository.php';
-require_once __DIR__ . '/../Repository/HistoriqueRepository.php';
 
 require_once __DIR__ . '/../Validation/TacheValidator.php';
 require_once __DIR__ . '/HistoriqueService.php';
@@ -13,8 +13,15 @@ require_once __DIR__ . '/HistoriqueService.php';
 /**
  * Service applicatif des tâches.
  *
- * Coordonne les règles de validation, la persistance
- * et l'enregistrement des actions dans l'historique.
+ * Responsabilités :
+ * - appliquer les règles métier ;
+ * - valider les données des tâches ;
+ * - vérifier les droits d'accès aux tâches ;
+ * - coordonner les repositories ;
+ * - gérer les transactions ;
+ * - enregistrer les actions dans l'historique.
+ *
+ * Compatible avec PHP 5.5.12.
  */
 class TacheService
 {
@@ -24,28 +31,45 @@ class TacheService
     private $validator;
     private $historiqueService;
 
+    /**
+     * Initialise les dépendances du service.
+     */
     public function __construct(Database $database)
     {
         $this->database = $database;
 
         $this->tacheRepository = new TacheRepository($database);
-        $this->categorieRepository = new CategorieRepository($database);
+
+        $this->categorieRepository = new CategorieRepository(
+            $database
+        );
+
         $this->validator = new TacheValidator();
 
-        $historiqueRepository = new HistoriqueRepository($database);
-
         $this->historiqueService = new HistoriqueService(
-            $historiqueRepository
+            $database
         );
     }
 
     /**
-     * Liste les tâches et calcule les statistiques.
+     * Retourne les tâches d'un utilisateur et leurs statistiques.
      */
     public function listerParUtilisateur($utilisateurId)
     {
+        if (!$this->idValide($utilisateurId)) {
+            return array(
+                'taches' => array(),
+                'statistiques' => array(
+                    'total' => 0,
+                    'a_faire' => 0,
+                    'en_cours' => 0,
+                    'terminees' => 0
+                )
+            );
+        }
+
         $taches = $this->tacheRepository->trouverParUtilisateur(
-            $utilisateurId
+            (int) $utilisateurId
         );
 
         $statistiques = array(
@@ -56,12 +80,18 @@ class TacheService
         );
 
         foreach ($taches as $tache) {
-            if ($tache->getStatut() === 'a_faire') {
-                $statistiques['a_faire']++;
-            } elseif ($tache->getStatut() === 'en_cours') {
-                $statistiques['en_cours']++;
-            } elseif ($tache->getStatut() === 'terminee') {
-                $statistiques['terminees']++;
+            switch ($tache->getStatut()) {
+                case 'a_faire':
+                    $statistiques['a_faire']++;
+                    break;
+
+                case 'en_cours':
+                    $statistiques['en_cours']++;
+                    break;
+
+                case 'terminee':
+                    $statistiques['terminees']++;
+                    break;
             }
         }
 
@@ -72,21 +102,26 @@ class TacheService
     }
 
     /**
-     * Recherche une tâche appartenant à l'utilisateur.
+     * Recherche une tâche appartenant à un utilisateur.
      */
     public function trouverPourUtilisateur($id, $utilisateurId)
     {
-        $id = (int) $id;
-
-        if ($id <= 0) {
+        if (
+            !$this->idValide($id)
+            || !$this->idValide($utilisateurId)
+        ) {
             return null;
         }
 
-        $tache = $this->tacheRepository->trouverParId($id);
+        $tache = $this->tacheRepository->trouverParId((int) $id);
+
+        if ($tache === null) {
+            return null;
+        }
 
         if (
-            $tache === null
-            || (int) $tache->getUtilisateurId() !== (int) $utilisateurId
+            (int) $tache->getUtilisateurId()
+            !== (int) $utilisateurId
         ) {
             return null;
         }
@@ -95,7 +130,7 @@ class TacheService
     }
 
     /**
-     * Retourne les catégories disponibles pour les formulaires.
+     * Retourne les catégories disponibles.
      */
     public function obtenirCategories()
     {
@@ -107,9 +142,23 @@ class TacheService
      */
     public function creer($utilisateurId, $donnees)
     {
+        if (!$this->idValide($utilisateurId)) {
+            return $this->resultatErreur(
+                'Identifiant utilisateur invalide.'
+            );
+        }
+
+        if (!is_array($donnees)) {
+            $donnees = array();
+        }
+
         $tache = new Tache();
 
-        $this->remplirTache($tache, $utilisateurId, $donnees);
+        $this->remplirTache(
+            $tache,
+            (int) $utilisateurId,
+            $donnees
+        );
 
         if (!$this->validator->valider($tache)) {
             return array(
@@ -130,10 +179,11 @@ class TacheService
             $this->tacheRepository->ajouter($tache);
 
             $this->historiqueService->enregistrer(
-                $utilisateurId,
+                (int) $utilisateurId,
                 $tache->getId(),
                 'creation',
-                'La tâche "' . $tache->getTitre() . '" a été créée.'
+                'La tâche "' . $tache->getTitre()
+                . '" a été créée.'
             );
 
             $connexion->commit();
@@ -147,12 +197,7 @@ class TacheService
             );
 
         } catch (Exception $exception) {
-            if (
-                $connexion !== null
-                && $connexion->inTransaction()
-            ) {
-                $connexion->rollBack();
-            }
+            $this->annulerTransaction($connexion);
 
             return array(
                 'succes' => false,
@@ -169,7 +214,10 @@ class TacheService
      */
     public function modifier($id, $utilisateurId, $donnees)
     {
-        $tache = $this->trouverPourUtilisateur($id, $utilisateurId);
+        $tache = $this->trouverPourUtilisateur(
+            $id,
+            $utilisateurId
+        );
 
         if ($tache === null) {
             return array(
@@ -181,7 +229,15 @@ class TacheService
             );
         }
 
-        $this->remplirTache($tache, $utilisateurId, $donnees);
+        if (!is_array($donnees)) {
+            $donnees = array();
+        }
+
+        $this->remplirTache(
+            $tache,
+            (int) $utilisateurId,
+            $donnees
+        );
 
         if (!$this->validator->valider($tache)) {
             return array(
@@ -193,8 +249,23 @@ class TacheService
             );
         }
 
+        $connexion = null;
+
         try {
+            $connexion = $this->database->connect();
+            $connexion->beginTransaction();
+
             $this->tacheRepository->modifier($tache);
+
+            $this->historiqueService->enregistrer(
+                (int) $utilisateurId,
+                $tache->getId(),
+                'modification',
+                'La tâche "' . $tache->getTitre()
+                . '" a été modifiée.'
+            );
+
+            $connexion->commit();
 
             return array(
                 'succes' => true,
@@ -205,6 +276,8 @@ class TacheService
             );
 
         } catch (Exception $exception) {
+            $this->annulerTransaction($connexion);
+
             return array(
                 'succes' => false,
                 'introuvable' => false,
@@ -216,11 +289,14 @@ class TacheService
     }
 
     /**
-     * Supprime une tâche et enregistre son historique.
+     * Supprime une tâche appartenant à l'utilisateur.
      */
     public function supprimer($id, $utilisateurId)
     {
-        $tache = $this->trouverPourUtilisateur($id, $utilisateurId);
+        $tache = $this->trouverPourUtilisateur(
+            $id,
+            $utilisateurId
+        );
 
         if ($tache === null) {
             return array(
@@ -236,13 +312,16 @@ class TacheService
             $connexion->beginTransaction();
 
             $this->historiqueService->enregistrer(
-                $utilisateurId,
+                (int) $utilisateurId,
                 $tache->getId(),
                 'suppression',
-                'La tâche "' . $tache->getTitre() . '" a été supprimée.'
+                'La tâche "' . $tache->getTitre()
+                . '" a été supprimée.'
             );
 
-            $this->tacheRepository->supprimer($tache->getId());
+            $this->tacheRepository->supprimer(
+                $tache->getId()
+            );
 
             $connexion->commit();
 
@@ -252,12 +331,7 @@ class TacheService
             );
 
         } catch (Exception $exception) {
-            if (
-                $connexion !== null
-                && $connexion->inTransaction()
-            ) {
-                $connexion->rollBack();
-            }
+            $this->annulerTransaction($connexion);
 
             return array(
                 'succes' => false,
@@ -267,40 +341,63 @@ class TacheService
     }
 
     /**
-     * Transfère les données reçues dans l'entité.
+     * Transfère les données du formulaire vers l'entité.
      */
-    private function remplirTache(Tache $tache, $utilisateurId, $donnees)
-    {
-        $tache->setUtilisateurId($utilisateurId);
+    private function remplirTache(
+        Tache $tache,
+        $utilisateurId,
+        $donnees
+    ) {
+        $tache->setUtilisateurId((int) $utilisateurId);
 
-        $tache->setTitre($this->valeur($donnees, 'titre'));
-        $tache->setDescription($this->valeur($donnees, 'description'));
-
-        $categorieId = $this->valeur($donnees, 'categorie_id');
-
-        $tache->setCategorieId(
-            $categorieId !== ''
-            && is_numeric($categorieId)
-            && (int) $categorieId > 0
-                ? (int) $categorieId
-                : null
+        $tache->setTitre(
+            $this->valeur($donnees, 'titre')
         );
 
+        $tache->setDescription(
+            $this->valeur($donnees, 'description')
+        );
+
+        $categorieId = $this->valeur(
+            $donnees,
+            'categorie_id'
+        );
+
+        if ($this->idValide($categorieId)) {
+            $tache->setCategorieId((int) $categorieId);
+        } else {
+            $tache->setCategorieId(null);
+        }
+
         $tache->setStatut(
-            $this->valeur($donnees, 'statut', 'a_faire')
+            $this->valeur(
+                $donnees,
+                'statut',
+                'a_faire'
+            )
         );
 
         $tache->setPriorite(
-            $this->valeur($donnees, 'priorite', 'normale')
+            $this->valeur(
+                $donnees,
+                'priorite',
+                'normale'
+            )
         );
 
-        $dateEcheance = $this->valeur($donnees, 'date_echeance');
+        $dateEcheance = $this->valeur(
+            $donnees,
+            'date_echeance'
+        );
 
         $tache->setDateEcheance(
             $dateEcheance !== '' ? $dateEcheance : null
         );
 
-        $dureeEstimee = $this->valeur($donnees, 'duree_estimee');
+        $dureeEstimee = $this->valeur(
+            $donnees,
+            'duree_estimee'
+        );
 
         $tache->setDureeEstimee(
             $dureeEstimee !== '' ? $dureeEstimee : null
@@ -308,7 +405,7 @@ class TacheService
     }
 
     /**
-     * Lit une valeur scalaire du formulaire.
+     * Récupère une valeur scalaire du formulaire.
      */
     private function valeur($donnees, $cle, $defaut = '')
     {
@@ -320,5 +417,47 @@ class TacheService
         }
 
         return trim((string) $donnees[$cle]);
+    }
+
+    /**
+     * Vérifie qu'un identifiant est un entier strictement positif.
+     */
+    private function idValide($id)
+    {
+        if (!is_scalar($id)) {
+            return false;
+        }
+
+        $id = (string) $id;
+
+        return preg_match('/^[0-9]+$/', $id) === 1
+            && (int) $id > 0;
+    }
+
+    /**
+     * Annule une transaction ouverte lorsqu'une opération échoue.
+     */
+    private function annulerTransaction($connexion)
+    {
+        if (
+            $connexion !== null
+            && $connexion->inTransaction()
+        ) {
+            $connexion->rollBack();
+        }
+    }
+
+    /**
+     * Construit un résultat d'échec générique.
+     */
+    private function resultatErreur($message)
+    {
+        return array(
+            'succes' => false,
+            'introuvable' => false,
+            'erreurs' => array(),
+            'message' => $message,
+            'tache' => null
+        );
     }
 }

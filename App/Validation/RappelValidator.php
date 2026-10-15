@@ -1,10 +1,8 @@
 <?php
 
 require_once __DIR__ . '/../Entity/Rappel.php';
+require_once __DIR__ . '/Validator.php';
 
-/**
- * Valide les données d'un rappel.
- */
 class RappelValidator
 {
     private $erreurs = array();
@@ -13,47 +11,33 @@ class RappelValidator
     {
         $this->erreurs = array();
 
-        // Validation de la date du rappel
-        $dateRappel = trim($rappel->getDateRappel());
-        $message = trim($rappel->getMessage());
+        $dateRappel = trim((string) $rappel->getDateRappel());
+        $message = trim((string) $rappel->getMessage());
 
-        if ($dateRappel === '') {
+        if (!Validator::requis($dateRappel)) {
             $this->erreurs['date_rappel'] =
                 'La date du rappel est obligatoire.';
-        } else {
-            $date = DateTime::createFromFormat(
-                'Y-m-d H:i',
-                $dateRappel
-            );
-
-            if (
-                $date === false
-                || $date->format('Y-m-d H:i') !== $dateRappel
-            ) {
-                $this->erreurs['date_rappel'] =
-                    'La date du rappel est invalide.';
-            }
+        } elseif (!Validator::dateHeureValide($dateRappel)) {
+            $this->erreurs['date_rappel'] =
+                'La date du rappel est invalide.';
         }
 
-        // Validation du message
-        if ($message === '') {
+        if (!Validator::requis($message)) {
             $this->erreurs['message'] =
                 'Le message du rappel est obligatoire.';
-        } elseif (strlen($message) > 255) {
+        } elseif (!Validator::longueurMaximale($message, 255)) {
             $this->erreurs['message'] =
                 'Le message ne peut pas dépasser 255 caractères.';
         }
 
-        // Validation du statut
         $statutsAutorises = array(
             'actif',
             'termine'
         );
 
-        if (!in_array(
+        if (!Validator::valeurAutorisee(
             $rappel->getStatut(),
-            $statutsAutorises,
-            true
+            $statutsAutorises
         )) {
             $this->erreurs['statut'] =
                 'Le statut sélectionné est invalide.';

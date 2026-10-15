@@ -1,11 +1,8 @@
 <?php
 
 require_once __DIR__ . '/../Entity/Tache.php';
+require_once __DIR__ . '/Validator.php';
 
-/**
- * Validation des tâches de TaskFlow.
- * Compatible avec PHP 5.5.12.
- */
 class TacheValidator
 {
     private $erreurs = array();
@@ -14,34 +11,30 @@ class TacheValidator
     {
         $this->erreurs = array();
 
-        // Validation du titre
         $titre = trim((string) $tache->getTitre());
 
-        if ($titre === '') {
+        if (!Validator::requis($titre)) {
             $this->erreurs['titre'] =
                 'Le titre de la tâche est obligatoire.';
-        } elseif (strlen(utf8_decode($titre)) > 150) {
+        } elseif (!Validator::longueurMaximale($titre, 150)) {
             $this->erreurs['titre'] =
                 'Le titre ne peut pas dépasser 150 caractères.';
         }
 
-        // Validation du statut
         $statutsAutorises = array(
             'a_faire',
             'en_cours',
             'terminee'
         );
 
-        if (!in_array(
+        if (!Validator::valeurAutorisee(
             $tache->getStatut(),
-            $statutsAutorises,
-            true
+            $statutsAutorises
         )) {
             $this->erreurs['statut'] =
                 'Le statut sélectionné est invalide.';
         }
 
-        // Validation de la priorité
         $prioritesAutorisees = array(
             'basse',
             'normale',
@@ -49,24 +42,18 @@ class TacheValidator
             'urgente'
         );
 
-        if (!in_array(
+        if (!Validator::valeurAutorisee(
             $tache->getPriorite(),
-            $prioritesAutorisees,
-            true
+            $prioritesAutorisees
         )) {
             $this->erreurs['priorite'] =
                 'La priorité sélectionnée est invalide.';
         }
 
-        // Validation de la durée estimée
         $duree = $tache->getDureeEstimee();
 
         if ($duree !== null && $duree !== '') {
-            if (
-                !is_numeric($duree)
-                || (int) $duree < 1
-                || (string) (int) $duree !== (string) $duree
-            ) {
+            if (!Validator::entierPositif($duree)) {
                 $this->erreurs['duree_estimee'] =
                     'La durée doit être un nombre entier supérieur à 0.';
             }

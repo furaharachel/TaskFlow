@@ -2,33 +2,18 @@
 
 require_once __DIR__ . '/Controller.php';
 require_once __DIR__ . '/../Session.php';
+require_once __DIR__ . '/../Service/SousTacheService.php';
 require_once __DIR__ . '/../../Config/Database.php';
 
-require_once __DIR__ . '/../Entity/Tache.php';
-require_once __DIR__ . '/../Entity/SousTache.php';
-
-require_once __DIR__ . '/../Repository/TacheRepository.php';
-require_once __DIR__ . '/../Repository/SousTacheRepository.php';
-
-require_once __DIR__ . '/../Validation/SousTacheValidator.php';
-
-/**
- * Contrôleur responsable de la gestion des sous-tâches.
- */
 class SousTacheController extends Controller
 {
-    private $tacheRepository;
-    private $sousTacheRepository;
+    private $sousTacheService;
 
     public function __construct(Database $database)
     {
-        $this->tacheRepository = new TacheRepository($database);
-        $this->sousTacheRepository = new SousTacheRepository($database);
+        $this->sousTacheService = new SousTacheService($database);
     }
 
-    /**
-     * Vérifie la session utilisateur.
-     */
     private function obtenirUtilisateurConnecte()
     {
         Session::demarrer();
@@ -40,75 +25,20 @@ class SousTacheController extends Controller
         return (int) Session::obtenirUtilisateurId();
     }
 
-    /**
-     * Vérifie que la tâche principale appartient à l'utilisateur.
-     */
-    private function obtenirTacheAutorisee($tacheId, $utilisateurId)
-    {
-        $tacheId = (int) $tacheId;
-
-        if ($tacheId <= 0) {
-            return null;
-        }
-
-        $tache = $this->tacheRepository->trouverParId($tacheId);
-
-        if (
-            $tache === null
-            || (int) $tache->getUtilisateurId() !== (int) $utilisateurId
-        ) {
-            return null;
-        }
-
-        return $tache;
-    }
-
-    /**
-     * Recherche une sous-tâche et vérifie son propriétaire.
-     */
-    private function obtenirSousTacheAutorisee($id, $utilisateurId)
-    {
-        $id = (int) $id;
-
-        if ($id <= 0) {
-            return null;
-        }
-
-        $sousTache = $this->sousTacheRepository->trouverParId($id);
-
-        if ($sousTache === null) {
-            return null;
-        }
-
-        $tache = $this->obtenirTacheAutorisee(
-            $sousTache->getTacheId(),
-            $utilisateurId
-        );
-
-        if ($tache === null) {
-            return null;
-        }
-
-        return $sousTache;
-    }
-
-    /**
-     * Affiche les sous-tâches et traite leur création.
-     */
     public function index($tacheId)
     {
         $utilisateurId = $this->obtenirUtilisateurConnecte();
-        $tacheId = (int) $tacheId;
 
-        $tache = $this->obtenirTacheAutorisee(
+        $contexte = $this->sousTacheService->obtenirListePourTache(
             $tacheId,
             $utilisateurId
         );
 
-        if ($tache === null) {
+        if ($contexte === null) {
             $this->rediriger('/TaskFlow/Web/taches.php');
         }
 
+        $tacheId = (int) $tacheId;
         $titre = '';
         $statut = 'a_faire';
         $erreurTitre = '';
@@ -122,57 +52,29 @@ class SousTacheController extends Controller
                 (string) $this->obtenirPost('statut', 'a_faire')
             );
 
-            $sousTache = new SousTache();
-            $sousTache->setTacheId($tacheId);
-            $sousTache->setTitre($titre);
-            $sousTache->setStatut($statut);
-
-            $validator = new SousTacheValidator();
-
-            if ($validator->valider($sousTache)) {
-                try {
-                    $this->sousTacheRepository->ajouter($sousTache);
-
-                    $this->rediriger(
-                        '/TaskFlow/Web/sous-taches.php?id=' . $tacheId
-                    );
-                } catch (PDOException $exception) {
-                    $message = 'Impossible de créer la sous-tâche.';
-                }
-            } else {
-                $erreurs = $validator->getErreurs();
-
-                $message = 'Veuillez corriger les erreurs du formulaire.';
-
-                if (isset($erreurs['titre'])) {
-                    $erreurTitre = $erreurs['titre'];
-                }
-
-                if (isset($erreurs['statut'])) {
-                    $erreurStatut = $erreurs['statut'];
-                }
-            }
-        }
-
-        $sousTaches = $this->sousTacheRepository->trouverParTache(
-            $tacheId
-        );
-
-        $nombreSousTaches = count($sousTaches);
-        $nombreSousTachesTerminees = 0;
-
-        foreach ($sousTaches as $sousTache) {
-            if ($sousTache->getStatut() === 'terminee') {
-                $nombreSousTachesTerminees++;
-            }
-        }
-
-        $progression = 0;
-
-        if ($nombreSousTaches > 0) {
-            $progression = (int) round(
-                ($nombreSousTachesTerminees / $nombreSousTaches) * 100
+            $resultat = $this->sousTacheService->creer(
+                $tacheId,
+                $utilisateurId,
+                $titre,
+                $statut
             );
+
+            if ($resultat['succes']) {
+                $this->rediriger(
+                    '/TaskFlow/Web/sous-taches.php?id=' . $tacheId
+                );
+            }
+
+            $erreurs = $resultat['erreurs'];
+            $message = $resultat['message'];
+
+            if (isset($erreurs['titre'])) {
+                $erreurTitre = $erreurs['titre'];
+            }
+
+            if (isset($erreurs['statut'])) {
+                $erreurStatut = $erreurs['statut'];
+            }
         }
 
         $this->afficherVue(
@@ -180,29 +82,27 @@ class SousTacheController extends Controller
             array(
                 'titrePage' => 'Sous-tâches',
                 'id' => $tacheId,
-                'tache' => $tache,
+                'tache' => $contexte['tache'],
                 'titre' => $titre,
                 'statut' => $statut,
                 'erreurTitre' => $erreurTitre,
                 'erreurStatut' => $erreurStatut,
                 'message' => $message,
                 'erreurs' => $erreurs,
-                'sousTaches' => $sousTaches,
-                'nombreSousTaches' => $nombreSousTaches,
-                'nombreSousTachesTerminees' => $nombreSousTachesTerminees,
-                'progression' => $progression
+                'sousTaches' => $contexte['sousTaches'],
+                'nombreSousTaches' => $contexte['nombreSousTaches'],
+                'nombreSousTachesTerminees' =>
+                    $contexte['nombreSousTachesTerminees'],
+                'progression' => $contexte['progression']
             )
         );
     }
 
-    /**
-     * Affiche et traite la modification d'une sous-tâche.
-     */
     public function modifier($id)
     {
         $utilisateurId = $this->obtenirUtilisateurConnecte();
 
-        $sousTache = $this->obtenirSousTacheAutorisee(
+        $sousTache = $this->sousTacheService->obtenirPourModification(
             $id,
             $utilisateurId
         );
@@ -212,7 +112,6 @@ class SousTacheController extends Controller
         }
 
         $tacheId = (int) $sousTache->getTacheId();
-
         $titre = $sousTache->getTitre();
         $statut = $sousTache->getStatut();
 
@@ -227,33 +126,28 @@ class SousTacheController extends Controller
                 (string) $this->obtenirPost('statut', 'a_faire')
             );
 
-            $sousTache->setTitre($titre);
-            $sousTache->setStatut($statut);
+            $resultat = $this->sousTacheService->modifier(
+                $id,
+                $utilisateurId,
+                $titre,
+                $statut
+            );
 
-            $validator = new SousTacheValidator();
+            if ($resultat['succes']) {
+                $this->rediriger(
+                    '/TaskFlow/Web/sous-taches.php?id=' . $tacheId
+                );
+            }
 
-            if ($validator->valider($sousTache)) {
-                try {
-                    $this->sousTacheRepository->modifier($sousTache);
+            $erreurs = $resultat['erreurs'];
+            $message = $resultat['message'];
 
-                    $this->rediriger(
-                        '/TaskFlow/Web/sous-taches.php?id=' . $tacheId
-                    );
-                } catch (PDOException $exception) {
-                    $message = 'Impossible de modifier la sous-tâche.';
-                }
-            } else {
-                $erreurs = $validator->getErreurs();
+            if (isset($erreurs['titre'])) {
+                $erreurTitre = $erreurs['titre'];
+            }
 
-                $message = 'Veuillez corriger les erreurs du formulaire.';
-
-                if (isset($erreurs['titre'])) {
-                    $erreurTitre = $erreurs['titre'];
-                }
-
-                if (isset($erreurs['statut'])) {
-                    $erreurStatut = $erreurs['statut'];
-                }
+            if (isset($erreurs['statut'])) {
+                $erreurStatut = $erreurs['statut'];
             }
         }
 
@@ -274,36 +168,32 @@ class SousTacheController extends Controller
         );
     }
 
-    /**
-     * Supprime une sous-tâche appartenant à l'utilisateur.
-     */
     public function supprimer($id)
     {
         $utilisateurId = $this->obtenirUtilisateurConnecte();
 
-        $sousTache = $this->obtenirSousTacheAutorisee(
+        $resultat = $this->sousTacheService->supprimer(
             $id,
             $utilisateurId
         );
 
-        if ($sousTache === null) {
+        if (
+            !$resultat['succes']
+            || empty($resultat['tacheId'])
+        ) {
+            if (!empty($resultat['tacheId'])) {
+                $this->rediriger(
+                    '/TaskFlow/Web/sous-taches.php?id='
+                    . (int) $resultat['tacheId']
+                );
+            }
+
             $this->rediriger('/TaskFlow/Web/taches.php');
         }
 
-        $tacheId = (int) $sousTache->getTacheId();
-
-        try {
-            $this->sousTacheRepository->supprimer(
-                $sousTache->getId()
-            );
-        } catch (PDOException $exception) {
-            $this->rediriger(
-                '/TaskFlow/Web/sous-taches.php?id=' . $tacheId
-            );
-        }
-
         $this->rediriger(
-            '/TaskFlow/Web/sous-taches.php?id=' . $tacheId
+            '/TaskFlow/Web/sous-taches.php?id='
+            . (int) $resultat['tacheId']
         );
     }
 }

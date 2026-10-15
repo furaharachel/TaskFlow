@@ -1,20 +1,13 @@
 <?php
 
-require_once __DIR__ . '/../../Config/Database.php';
+require_once __DIR__ . '/Repository.php';
 require_once __DIR__ . '/../Entity/Rappel.php';
 
-class RappelRepository
+class RappelRepository extends Repository
 {
-    private $database;
-
-    public function __construct(Database $database)
-    {
-        $this->database = $database;
-    }
-
     public function ajouter(Rappel $rappel)
     {
-        $connection = $this->database->connect();
+        $connection = $this->getPdo();
 
         $requete = $connection->prepare(
             'INSERT INTO rappels
@@ -57,9 +50,11 @@ class RappelRepository
 
     public function trouverParTache($tacheId)
     {
-        $connection = $this->database->connect();
+        if (!$this->idValide($tacheId)) {
+            return array();
+        }
 
-        $requete = $connection->prepare(
+        $requete = $this->getPdo()->prepare(
             'SELECT *
              FROM rappels
              WHERE tache_id = :tache_id
@@ -67,12 +62,12 @@ class RappelRepository
         );
 
         $requete->execute(array(
-            ':tache_id' => $tacheId
+            ':tache_id' => (int) $tacheId
         ));
 
         $rappels = array();
 
-        while ($donnees = $requete->fetch()) {
+        while ($donnees = $requete->fetch(PDO::FETCH_ASSOC)) {
             $rappels[] = $this->creerObjet($donnees);
         }
 
@@ -81,19 +76,21 @@ class RappelRepository
 
     public function trouverParId($id)
     {
-        $connection = $this->database->connect();
+        if (!$this->idValide($id)) {
+            return null;
+        }
 
-        $requete = $connection->prepare(
+        $requete = $this->getPdo()->prepare(
             'SELECT *
              FROM rappels
              WHERE id = :id'
         );
 
         $requete->execute(array(
-            ':id' => $id
+            ':id' => (int) $id
         ));
 
-        $donnees = $requete->fetch();
+        $donnees = $requete->fetch(PDO::FETCH_ASSOC);
 
         if (!$donnees) {
             return null;
@@ -104,9 +101,7 @@ class RappelRepository
 
     public function modifier(Rappel $rappel)
     {
-        $connection = $this->database->connect();
-
-        $requete = $connection->prepare(
+        $requete = $this->getPdo()->prepare(
             'UPDATE rappels
              SET
                 date_rappel = :date_rappel,
@@ -133,40 +128,44 @@ class RappelRepository
 
     public function supprimer($id)
     {
-        $connection = $this->database->connect();
+        if (!$this->idValide($id)) {
+            return false;
+        }
 
-        $requete = $connection->prepare(
+        $requete = $this->getPdo()->prepare(
             'DELETE FROM rappels
              WHERE id = :id'
         );
 
         return $requete->execute(array(
-            ':id' => $id
+            ':id' => (int) $id
         ));
     }
 
     public function trouverActifsParUtilisateur($utilisateurId)
     {
-        $connection = $this->database->connect();
+        if (!$this->idValide($utilisateurId)) {
+            return array();
+        }
 
-        $requete = $connection->prepare(
-            'SELECT
-                r.*
+        $requete = $this->getPdo()->prepare(
+            'SELECT r.*
              FROM rappels r
              INNER JOIN taches t
                 ON r.tache_id = t.id
              WHERE t.utilisateur_id = :utilisateur_id
-             AND r.statut = "actif"
+             AND r.statut = :statut
              ORDER BY r.date_rappel ASC'
         );
 
         $requete->execute(array(
-            ':utilisateur_id' => $utilisateurId
+            ':utilisateur_id' => (int) $utilisateurId,
+            ':statut' => 'actif'
         ));
 
         $rappels = array();
 
-        while ($donnees = $requete->fetch()) {
+        while ($donnees = $requete->fetch(PDO::FETCH_ASSOC)) {
             $rappels[] = $this->creerObjet($donnees);
         }
 

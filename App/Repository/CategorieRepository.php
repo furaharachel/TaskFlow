@@ -1,20 +1,13 @@
 <?php
 
-require_once __DIR__ . '/../../Config/Database.php';
+require_once __DIR__ . '/Repository.php';
 require_once __DIR__ . '/../Entity/Categorie.php';
 
-class CategorieRepository
+class CategorieRepository extends Repository
 {
-    private $database;
-
-    public function __construct(Database $database)
-    {
-        $this->database = $database;
-    }
-
     public function ajouter(Categorie $categorie)
     {
-        $connection = $this->database->connect();
+        $connection = $this->getPdo();
 
         $requete = $connection->prepare(
             'INSERT INTO categories
@@ -51,9 +44,7 @@ class CategorieRepository
 
     public function trouverTous()
     {
-        $connection = $this->database->connect();
-
-        $requete = $connection->query(
+        $requete = $this->getPdo()->query(
             'SELECT *
              FROM categories
              ORDER BY nom ASC'
@@ -61,7 +52,7 @@ class CategorieRepository
 
         $categories = array();
 
-        while ($donnees = $requete->fetch()) {
+        while ($donnees = $requete->fetch(PDO::FETCH_ASSOC)) {
             $categories[] = $this->creerObjet($donnees);
         }
 
@@ -70,19 +61,21 @@ class CategorieRepository
 
     public function trouverParId($id)
     {
-        $connection = $this->database->connect();
+        if (!$this->idValide($id)) {
+            return null;
+        }
 
-        $requete = $connection->prepare(
+        $requete = $this->getPdo()->prepare(
             'SELECT *
              FROM categories
              WHERE id = :id'
         );
 
         $requete->execute(array(
-            ':id' => $id
+            ':id' => (int) $id
         ));
 
-        $donnees = $requete->fetch();
+        $donnees = $requete->fetch(PDO::FETCH_ASSOC);
 
         if (!$donnees) {
             return null;
@@ -93,7 +86,7 @@ class CategorieRepository
 
     public function modifier(Categorie $categorie)
     {
-        $connection = $this->database->connect();
+        $connection = $this->getPdo();
 
         $requete = $connection->prepare(
             'UPDATE categories
@@ -120,16 +113,15 @@ class CategorieRepository
 
     public function supprimer($id)
     {
-        $connection = $this->database->connect();
+        if (!$this->idValide($id)) {
+            return false;
+        }
+
+        $connection = $this->getPdo();
 
         try {
-
             $connection->beginTransaction();
 
-            /*
-             * Les tâches qui utilisent cette catégorie
-             * deviennent "Sans catégorie".
-             */
             $requeteTaches = $connection->prepare(
                 'UPDATE taches
                  SET categorie_id = NULL
@@ -137,20 +129,16 @@ class CategorieRepository
             );
 
             $requeteTaches->execute(array(
-                ':categorie_id' => $id
+                ':categorie_id' => (int) $id
             ));
 
-            /*
-             * Maintenant que les tâches ne dépendent
-             * plus de la catégorie, on peut la supprimer.
-             */
             $requeteCategorie = $connection->prepare(
                 'DELETE FROM categories
                  WHERE id = :id'
             );
 
             $requeteCategorie->execute(array(
-                ':id' => $id
+                ':id' => (int) $id
             ));
 
             $supprimee = $requeteCategorie->rowCount() > 0;
@@ -159,8 +147,7 @@ class CategorieRepository
 
             return $supprimee;
 
-        } catch (PDOException $exception) {
-
+        } catch (Exception $exception) {
             if ($connection->inTransaction()) {
                 $connection->rollBack();
             }

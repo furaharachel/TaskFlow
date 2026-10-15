@@ -1,22 +1,16 @@
 <?php
 
-require_once __DIR__ . '/../../Config/Database.php';
+require_once __DIR__ . '/Repository.php';
 require_once __DIR__ . '/../Entity/Utilisateur.php';
 
-class UtilisateurRepository
+class UtilisateurRepository extends Repository
 {
-    private $database;
-
-    public function __construct(Database $database)
-    {
-        $this->database = $database;
-    }
-
+    /**
+     * Recherche un utilisateur par son adresse e-mail.
+     */
     public function trouverParEmail($email)
     {
-        $connection = $this->database->connect();
-
-        $requete = $connection->prepare(
+        $requete = $this->getPdo()->prepare(
             'SELECT *
              FROM utilisateurs
              WHERE email = :email
@@ -27,7 +21,7 @@ class UtilisateurRepository
             ':email' => $email
         ));
 
-        $donnees = $requete->fetch();
+        $donnees = $requete->fetch(PDO::FETCH_ASSOC);
 
         if (!$donnees) {
             return null;
@@ -36,6 +30,56 @@ class UtilisateurRepository
         return $this->creerObjet($donnees);
     }
 
+    /**
+     * Enregistre un nouvel utilisateur.
+     * Le mot de passe reçu doit déjà être haché.
+     */
+    public function ajouter(Utilisateur $utilisateur)
+    {
+        $connexion = $this->getPdo();
+
+        $date = date('Y-m-d H:i:s');
+
+        $requete = $connexion->prepare(
+            'INSERT INTO utilisateurs
+            (
+                nom,
+                prenom,
+                email,
+                mot_de_passe,
+                date_creation,
+                date_modification
+            )
+            VALUES
+            (
+                :nom,
+                :prenom,
+                :email,
+                :mot_de_passe,
+                :date_creation,
+                :date_modification
+            )'
+        );
+
+        $requete->execute(array(
+            ':nom' => $utilisateur->getNom(),
+            ':prenom' => $utilisateur->getPrenom(),
+            ':email' => $utilisateur->getEmail(),
+            ':mot_de_passe' => $utilisateur->getMotDePasse(),
+            ':date_creation' => $date,
+            ':date_modification' => $date
+        ));
+
+        $utilisateur->setId($connexion->lastInsertId());
+        $utilisateur->setDateCreation($date);
+        $utilisateur->setDateModification($date);
+
+        return $utilisateur;
+    }
+
+    /**
+     * Transforme les données SQL en entité Utilisateur.
+     */
     private function creerObjet($donnees)
     {
         $utilisateur = new Utilisateur();
@@ -46,7 +90,9 @@ class UtilisateurRepository
         $utilisateur->setEmail($donnees['email']);
         $utilisateur->setMotDePasse($donnees['mot_de_passe']);
         $utilisateur->setDateCreation($donnees['date_creation']);
-        $utilisateur->setDateModification($donnees['date_modification']);
+        $utilisateur->setDateModification(
+            $donnees['date_modification']
+        );
 
         return $utilisateur;
     }

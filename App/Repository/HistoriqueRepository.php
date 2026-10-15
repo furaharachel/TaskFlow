@@ -1,20 +1,13 @@
 <?php
 
-require_once __DIR__ . '/../../Config/Database.php';
+require_once __DIR__ . '/Repository.php';
 require_once __DIR__ . '/../Entity/Historique.php';
 
-class HistoriqueRepository
+class HistoriqueRepository extends Repository
 {
-    private $database;
-
-    public function __construct(Database $database)
-    {
-        $this->database = $database;
-    }
-
     public function ajouter(Historique $historique)
     {
-        $connection = $this->database->connect();
+        $connection = $this->getPdo();
 
         $requete = $connection->prepare(
             'INSERT INTO historique
@@ -55,9 +48,11 @@ class HistoriqueRepository
 
     public function trouverParUtilisateur($utilisateurId)
     {
-        $connection = $this->database->connect();
+        if (!$this->idValide($utilisateurId)) {
+            return array();
+        }
 
-        $requete = $connection->prepare(
+        $requete = $this->getPdo()->prepare(
             'SELECT
                 h.*,
                 t.titre AS tache_titre
@@ -70,12 +65,12 @@ class HistoriqueRepository
         );
 
         $requete->execute(array(
-            ':utilisateur_id' => $utilisateurId
+            ':utilisateur_id' => (int) $utilisateurId
         ));
 
         $historiques = array();
 
-        while ($donnees = $requete->fetch()) {
+        while ($donnees = $requete->fetch(PDO::FETCH_ASSOC)) {
             $historiques[] = $this->creerObjet($donnees);
         }
 
@@ -84,15 +79,17 @@ class HistoriqueRepository
 
     public function supprimerParTache($tacheId)
     {
-        $connection = $this->database->connect();
+        if (!$this->idValide($tacheId)) {
+            return false;
+        }
 
-        $requete = $connection->prepare(
+        $requete = $this->getPdo()->prepare(
             'DELETE FROM historique
              WHERE tache_id = :tache_id'
         );
 
         return $requete->execute(array(
-            ':tache_id' => $tacheId
+            ':tache_id' => (int) $tacheId
         ));
     }
 
@@ -101,9 +98,11 @@ class HistoriqueRepository
         $historique = new Historique();
 
         $historique->setId($donnees['id']);
+
         $historique->setUtilisateurId(
             $donnees['utilisateur_id']
         );
+
         $historique->setTacheId(
             $donnees['tache_id']
         );
@@ -116,17 +115,9 @@ class HistoriqueRepository
             $historique->setTacheTitre(null);
         }
 
-        $historique->setAction(
-            $donnees['action']
-        );
-
-        $historique->setDescription(
-            $donnees['description']
-        );
-
-        $historique->setDateAction(
-            $donnees['date_action']
-        );
+        $historique->setAction($donnees['action']);
+        $historique->setDescription($donnees['description']);
+        $historique->setDateAction($donnees['date_action']);
 
         return $historique;
     }
